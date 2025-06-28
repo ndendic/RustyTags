@@ -288,7 +288,7 @@ class RealisticTemplateBenchmark:
     def _simple_template_benchmarks(self):
         """Simple template rendering benchmarks with file loading."""
         return {
-            'RustyTags': lambda data: rt.Div(data['content'], class_=data['cls']).render(),
+            'RustyTags': lambda data: rt.Div(data['content'], class_=data['cls']),
             'Air': lambda data: Div(data['content'], cls=data['cls']).render(),
             'Jinja2': lambda data: self.jinja_env.get_template('simple.jinja2').render(**data),
             'Mako': lambda data: self.mako_lookup.get_template('simple.mako').render(**data),
@@ -346,7 +346,7 @@ class RealisticTemplateBenchmark:
                 class_="page-container"
             ),
             lang=data['lang']
-        ).render()
+        )
     
     def _air_complex_template(self, data):
         """Air complex template (no file loading - direct generation)."""
@@ -403,7 +403,7 @@ class RealisticTemplateBenchmark:
                 class_="products"
             ),
             class_="product-list"
-        ).render()
+        )
     
     def _air_product_list(self, data):
         """Air product list template."""

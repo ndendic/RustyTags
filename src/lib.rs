@@ -823,6 +823,94 @@ fn render_table_optimized(
 }
 
 // =============================================================================
+// IMMEDIATE RENDERING WITH DICT EXPLOSION AND PARALLELISM  
+// =============================================================================
+
+// Process children and extract attribute dictionaries
+fn separate_children_and_dicts(children: &[PyObject], py: Python) -> PyResult<(Vec<PyObject>, HashMap<String, String>)> {
+    let mut actual_children = Vec::new();
+    let mut extracted_attrs = HashMap::new();
+    
+    for child in children {
+        // Check if child is a dictionary (should be exploded as attributes)
+        if let Ok(dict) = child.downcast_bound::<PyDict>(py) {
+            // Explode dictionary into attributes
+            for (key, value) in dict.iter() {
+                let key_str = key.extract::<String>()?;
+                let value_str = value.extract::<String>()?;
+                extracted_attrs.insert(key_str, value_str);
+            }
+        } else {
+            // Regular child content
+            actual_children.push(child.clone_ref(py));
+        }
+    }
+    
+    Ok((actual_children, extracted_attrs))
+}
+
+// Process children with potential optimizations for large lists
+fn process_children_parallel(children: &[PyObject], py: Python) -> PyResult<String> {
+    if children.is_empty() {
+        return Ok(String::new());
+    }
+    
+    // For now, use optimized sequential processing
+    // Note: True parallelism is limited by Python's GIL
+    // Future optimization could use Rayon with proper Python handling
+    process_children_with_prefetch(children, py)
+}
+
+// Create tag with immediate rendering, dict explosion, and parallelism
+fn create_tag_immediate(
+    tag_name: &str,
+    children: Vec<PyObject>, 
+    kwargs: Option<&Bound<'_, PyDict>>,
+    py: Python
+) -> PyResult<String> {
+    // Step 1: Separate actual children from attribute dictionaries
+    let (actual_children, dict_attrs) = separate_children_and_dicts(&children, py)?;
+    
+    // Step 2: Merge kwargs and dict attributes
+    let mut all_attrs = dict_attrs;
+    if let Some(kwargs) = kwargs {
+        for (key, value) in kwargs.iter() {
+            let key_str = key.extract::<String>()?;
+            let value_str = value.extract::<String>()?;
+            // kwargs override dict attributes
+            all_attrs.insert(key_str, value_str);
+        }
+    }
+    
+    // Step 3: Process children (with potential parallelism)
+    let children_string = process_children_parallel(&actual_children, py)?;
+    
+    // Step 4: Build attributes string
+    let attr_storage = AttributeStorage::from_hashmap(all_attrs);
+    let attr_string = attr_storage.build_string();
+    
+    // Step 5: Assemble final HTML
+    let tag_lower = tag_name.to_lowercase();
+    let capacity = tag_lower.len() * 2 + attr_string.len() + children_string.len() + 5;
+    
+    let mut result = get_pooled_string(capacity);
+    result.push('<');
+    result.push_str(&tag_lower);
+    result.push_str(&attr_string);
+    result.push('>');
+    result.push_str(&children_string);
+    result.push_str("</");
+    result.push_str(&tag_lower);
+    result.push('>');
+    
+    // Return strings to pools
+    return_to_pool(attr_string);
+    return_to_pool(children_string);
+    
+    Ok(result)
+}
+
+// =============================================================================
 // CORE HTML STRING AND TAG STRUCTURES
 // =============================================================================
 
@@ -897,39 +985,9 @@ macro_rules! html_tag_optimized {
         #[doc = $doc]
         #[pyo3(signature = (*children, **kwargs))]
         #[inline(always)]
-        fn $name(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<HtmlString> {
+        fn $name(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<String> {
             let tag_name = normalize_tag_name(stringify!($name));
-            
-            // Fast path for no attributes
-            if likely(kwargs.is_none()) {
-                let children_string = process_children_with_prefetch(&children, py)?;
-                let capacity = tag_name.len() * 2 + children_string.len() + 5;
-                
-                let mut writer = HtmlWriter::new(capacity);
-                writer.buffer.push('<');
-                writer.buffer.push_str(&tag_name);
-                writer.buffer.push('>');
-                writer.buffer.push_str(&children_string);
-                writer.buffer.push_str("</");
-                writer.buffer.push_str(&tag_name);
-                writer.buffer.push('>');
-                
-                return_to_pool(children_string);
-                return Ok(writer.into_html_string());
-            }
-            
-            // Full path with attributes
-            let mut attrs = HashMap::default();
-            
-            if let Some(kwargs) = kwargs {
-                for (key, value) in kwargs.iter() {
-                    let key_str = key.extract::<String>()?;
-                    let value_str = value.extract::<String>()?;
-                    attrs.insert(key_str, value_str);
-                }
-            }
-            
-            build_html_tag_optimized(stringify!($name), children, attrs, py)
+            create_tag_immediate(&tag_name, children, kwargs, py)
         }
     };
 }
@@ -981,7 +1039,7 @@ html_tag_optimized!(Tbody, "Defines a table body group");
 #[doc = "Defines the HTML document"]
 #[pyo3(signature = (*children, **kwargs))]
 #[inline(always)]
-fn Html(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<HtmlString> {
+fn Html(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<String> {
     let attr_storage = if let Some(kwargs) = kwargs {
         let mut attrs = HashMap::default();
         for (key, value) in kwargs.iter() {
@@ -1042,7 +1100,7 @@ fn Html(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python)
     return_to_pool(head_string);
     return_to_pool(body_string);
     
-    Ok(writer.into_html_string())
+    Ok(writer.buffer)
 }
 
 // Backward-compatible Tag class (optimized)
