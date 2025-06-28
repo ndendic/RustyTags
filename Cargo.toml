@@ -1,0 +1,30 @@
+[package]
+name = "rusty_tags"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "rusty_tags"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.25.0"
+itoa = "1.0"  # Fast integer to string conversion
+ryu = "1.0"   # Fast float to string conversion
+ahash = "0.8"  # Faster hash algorithm - significant performance win
+smallvec = "1.13"  # Stack allocation for small collections
+
+# Aggressive optimization settings for maximum performance
+[profile.release]
+opt-level = 3          # Maximum optimization
+lto = "fat"           # Link-time optimization across all crates
+codegen-units = 1     # Single codegen unit for better optimization
+panic = "abort"       # Smaller binary size and slight performance gain
+strip = "symbols"     # Remove debug symbols for smaller binary
+overflow-checks = false  # Disable overflow checks for maximum speed
+debug-assertions = false # Disable debug assertions
+
+# Enable CPU-specific optimizations
+[build]
+rustflags = ["-C", "target-cpu=native"]
