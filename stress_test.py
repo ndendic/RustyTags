@@ -304,27 +304,27 @@ def main():
     air_size = len(result)
 
     print("Benchmarking Rust...")
-start = time.perf_counter()
-for _ in range(iterations):
-    result = str(create_catalog_rust())
-rust_time = (time.perf_counter() - start) / iterations
-rust_size = len(result)
-print(f"Debug: First Rust result has {rust_size} chars")
+    start = time.perf_counter()
+    for _ in range(iterations):
+        result = str(create_catalog_rust())
+        rust_time = (time.perf_counter() - start) / iterations
+        rust_size = len(result)
+        print(f"Debug: First Rust result has {rust_size} chars")
 
-    print(f'\n📊 EXTREME STRESS TEST RESULTS:')
-    print(f'=' * 40)
-    print(f'Jinja2: {jinja_time*1000:7.1f}ms ({1/jinja_time:5.0f} catalogs/sec) - {jinja_size:,} chars')
-    print(f'Mako:   {mako_time*1000:7.1f}ms ({1/mako_time:5.0f} catalogs/sec) - {mako_size:,} chars')
-    print(f'Air:    {air_time*1000:7.1f}ms ({1/air_time:5.0f} catalogs/sec) - {air_size:,} chars')
-    print(f'Rust:   {rust_time*1000:7.1f}ms ({1/rust_time:5.0f} catalogs/sec) - {rust_size:,} chars')
+        print(f'\n📊 EXTREME STRESS TEST RESULTS:')
+        print(f'=' * 40)
+        print(f'Jinja2: {jinja_time*1000:7.1f}ms ({1/jinja_time:5.0f} catalogs/sec) - {jinja_size:,} chars')
+        print(f'Mako:   {mako_time*1000:7.1f}ms ({1/mako_time:5.0f} catalogs/sec) - {mako_size:,} chars')
+        print(f'Air:    {air_time*1000:7.1f}ms ({1/air_time:5.0f} catalogs/sec) - {air_size:,} chars')
+        print(f'Rust:   {rust_time*1000:7.1f}ms ({1/rust_time:5.0f} catalogs/sec) - {rust_size:,} chars')
 
-    print(f'\n🚀 RUST SPEEDUPS:')
-    print(f'vs Jinja2: {jinja_time/rust_time:.1f}x faster')
-    print(f'vs Mako:   {mako_time/rust_time:.1f}x faster')  
-    print(f'vs Air:    {air_time/rust_time:.1f}x faster')
+        print(f'\n🚀 RUST SPEEDUPS:')
+        print(f'vs Jinja2: {jinja_time/rust_time:.1f}x faster')
+        print(f'vs Mako:   {mako_time/rust_time:.1f}x faster')  
+        print(f'vs Air:    {air_time/rust_time:.1f}x faster')
 
-    print(f'\n💡 This test generated {rust_size:,} character HTML documents')
-    print(f'   with {len(products) * 25:,}+ HTML elements per document!')
+        print(f'\n💡 This test generated {rust_size:,} character HTML documents')
+        print(f'   with {len(products) * 25:,}+ HTML elements per document!')
 
 if __name__ == "__main__":
     main() 
