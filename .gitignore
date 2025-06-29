@@ -75,4 +75,7 @@ docs/_build/
 .python-version
 .env
 *.env
+
+# Claude
+.claude/
 CLAUDE.md
