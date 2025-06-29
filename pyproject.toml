@@ -42,3 +42,16 @@ Issues = "https://github.com/yourusername/rustyTags/issues"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
+python-source = "."
+module-name = "rusty_tags.rusty_tags"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pyright]
+include = ["rusty_tags"]
+pythonVersion = "3.8"
+typeCheckingMode = "basic"

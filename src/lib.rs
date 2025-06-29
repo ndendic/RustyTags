@@ -620,6 +620,52 @@ html_tag_optimized!(Tr, "Defines a table row");
 html_tag_optimized!(Ul, "Defines an unordered list");
 html_tag_optimized!(Ol, "Defines an ordered list");
 
+// Phase 1: Critical High Priority HTML tags (10 tags)
+html_tag_optimized!(Meta, "Defines metadata about an HTML document");
+html_tag_optimized!(Hr, "Defines a thematic break/horizontal rule");
+html_tag_optimized!(Iframe, "Defines an inline frame");
+html_tag_optimized!(Textarea, "Defines a multiline text input control");
+html_tag_optimized!(Select, "Defines a dropdown list");
+html_tag_optimized!(Figure, "Defines self-contained content");
+html_tag_optimized!(Figcaption, "Defines a caption for a figure element");
+html_tag_optimized!(Article, "Defines independent, self-contained content");
+html_tag_optimized!(Footer, "Defines a footer for a document or section");
+html_tag_optimized!(Details, "Defines additional details that can be viewed or hidden");
+html_tag_optimized!(Summary, "Defines a visible heading for a details element");
+html_tag_optimized!(Address, "Defines contact information for the author");
+
+// Phase 2: Table Enhancement Tags (6 tags)
+html_tag_optimized!(Tbody, "Defines a table body");
+html_tag_optimized!(Thead, "Defines a table header");
+html_tag_optimized!(Tfoot, "Defines a table footer");
+html_tag_optimized!(Caption, "Defines a table caption");
+html_tag_optimized!(Col, "Defines a table column");
+html_tag_optimized!(Colgroup, "Defines a group of table columns");
+
+// SVG Tags
+html_tag_optimized!(Svg, "Defines an SVG graphics container");
+html_tag_optimized!(Circle, "Defines a circle in SVG");
+html_tag_optimized!(Rect, "Defines a rectangle in SVG");
+html_tag_optimized!(Line, "Defines a line in SVG");
+html_tag_optimized!(Path, "Defines a path in SVG");
+html_tag_optimized!(Polygon, "Defines a polygon in SVG");
+html_tag_optimized!(Polyline, "Defines a polyline in SVG");
+html_tag_optimized!(Ellipse, "Defines an ellipse in SVG");
+html_tag_optimized!(Text, "Defines text in SVG");
+html_tag_optimized!(G, "Defines a group in SVG");
+html_tag_optimized!(Defs, "Defines reusable SVG elements");
+html_tag_optimized!(Use, "Defines a reusable SVG element instance");
+html_tag_optimized!(Symbol, "Defines a reusable SVG symbol");
+html_tag_optimized!(Marker, "Defines a marker for SVG shapes");
+html_tag_optimized!(LinearGradient, "Defines a linear gradient in SVG");
+html_tag_optimized!(RadialGradient, "Defines a radial gradient in SVG");
+html_tag_optimized!(Stop, "Defines a gradient stop in SVG");
+html_tag_optimized!(Pattern, "Defines a pattern in SVG");
+html_tag_optimized!(ClipPath, "Defines a clipping path in SVG");
+html_tag_optimized!(Mask, "Defines a mask in SVG");
+html_tag_optimized!(Image, "Defines an image in SVG");
+html_tag_optimized!(ForeignObject, "Defines foreign content in SVG");
+
 // Custom tag function for dynamic tag creation
 #[pyfunction]
 #[doc = "Creates a custom HTML tag with any tag name"]
@@ -792,6 +838,52 @@ fn rusty_tags(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(Tr, m)?)?;
     m.add_function(wrap_pyfunction!(Ul, m)?)?;
     m.add_function(wrap_pyfunction!(Ol, m)?)?;
+    
+    // Phase 1: Critical High Priority HTML tags
+    m.add_function(wrap_pyfunction!(Meta, m)?)?;
+    m.add_function(wrap_pyfunction!(Hr, m)?)?;
+    m.add_function(wrap_pyfunction!(Iframe, m)?)?;
+    m.add_function(wrap_pyfunction!(Textarea, m)?)?;
+    m.add_function(wrap_pyfunction!(Select, m)?)?;
+    m.add_function(wrap_pyfunction!(Figure, m)?)?;
+    m.add_function(wrap_pyfunction!(Figcaption, m)?)?;
+    m.add_function(wrap_pyfunction!(Article, m)?)?;
+    m.add_function(wrap_pyfunction!(Footer, m)?)?;
+    m.add_function(wrap_pyfunction!(Details, m)?)?;
+    m.add_function(wrap_pyfunction!(Summary, m)?)?;
+    m.add_function(wrap_pyfunction!(Address, m)?)?;
+    
+    // Phase 2: Table Enhancement Tags
+    m.add_function(wrap_pyfunction!(Tbody, m)?)?;
+    m.add_function(wrap_pyfunction!(Thead, m)?)?;
+    m.add_function(wrap_pyfunction!(Tfoot, m)?)?;
+    m.add_function(wrap_pyfunction!(Caption, m)?)?;
+    m.add_function(wrap_pyfunction!(Col, m)?)?;
+    m.add_function(wrap_pyfunction!(Colgroup, m)?)?;
+    
+    // SVG Tags
+    m.add_function(wrap_pyfunction!(Svg, m)?)?;
+    m.add_function(wrap_pyfunction!(Circle, m)?)?;
+    m.add_function(wrap_pyfunction!(Rect, m)?)?;
+    m.add_function(wrap_pyfunction!(Line, m)?)?;
+    m.add_function(wrap_pyfunction!(Path, m)?)?;
+    m.add_function(wrap_pyfunction!(Polygon, m)?)?;
+    m.add_function(wrap_pyfunction!(Polyline, m)?)?;
+    m.add_function(wrap_pyfunction!(Ellipse, m)?)?;
+    m.add_function(wrap_pyfunction!(Text, m)?)?;
+    m.add_function(wrap_pyfunction!(G, m)?)?;
+    m.add_function(wrap_pyfunction!(Defs, m)?)?;
+    m.add_function(wrap_pyfunction!(Use, m)?)?;
+    m.add_function(wrap_pyfunction!(Symbol, m)?)?;
+    m.add_function(wrap_pyfunction!(Marker, m)?)?;
+    m.add_function(wrap_pyfunction!(LinearGradient, m)?)?;
+    m.add_function(wrap_pyfunction!(RadialGradient, m)?)?;
+    m.add_function(wrap_pyfunction!(Stop, m)?)?;
+    m.add_function(wrap_pyfunction!(Pattern, m)?)?;
+    m.add_function(wrap_pyfunction!(ClipPath, m)?)?;
+    m.add_function(wrap_pyfunction!(Mask, m)?)?;
+    m.add_function(wrap_pyfunction!(Image, m)?)?;
+    m.add_function(wrap_pyfunction!(ForeignObject, m)?)?;
     
     // Custom tag function
     m.add_function(wrap_pyfunction!(CustomTag, m)?)?;
