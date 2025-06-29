@@ -6,7 +6,7 @@ Direct performance comparison: RustyTags vs Air vs pure Python string building
 import time
 import statistics
 import rusty_tags as rt
-from air.tags import Div as AirDiv, H1 as AirH1, P as AirP
+from air.tags import Div as AirDiv, H1 as AirH1, P as AirP, Ul as AirUl, Li as AirLi
 
 def benchmark_function(name, func, iterations=10000, warmup=1000):
     """Benchmark a function with warmup and multiple runs."""
@@ -126,7 +126,6 @@ def test_list_generation():
     
     # Air  
     def air_list():
-        from air.tags import Ul as AirUl, Li as AirLi
         return AirUl(
             *[AirLi(item, cls=f"item-{i}") for i, item in enumerate(items)],
             cls="item-list"

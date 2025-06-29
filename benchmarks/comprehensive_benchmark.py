@@ -91,7 +91,7 @@ class BenchmarkRunner:
 
 def simple_tag_rusty():
     """RustyTags: Simple div with class."""
-    return rt.Div("Hello World", class_="greeting").render()
+    return rt.Div("Hello World", class_="greeting")
 
 def simple_tag_air():
     """Air: Simple div with class."""
@@ -163,7 +163,7 @@ def complex_page_rusty():
             class_="page-container"
         ),
         lang="en"
-    ).render()
+    )
 
 def complex_page_air():
     """Air: Complex nested page structure."""
@@ -329,7 +329,7 @@ def attribute_heavy_rusty():
         title="Main content section",
         role="main",
         aria_label="Primary content area"
-    ).render()
+    )
 
 def attribute_heavy_air():
     """Air: Tag with many attributes."""
@@ -366,7 +366,7 @@ def list_generation_rusty():
     return rt.Ul(
         *[rt.Li(f"List item {i}", class_=f"item-{i}") for i in range(100)],
         class_="large-list"
-    ).render()
+    )
 
 def list_generation_air():
     """Air: Generate a list with 100 items."""
@@ -418,7 +418,7 @@ def table_generation_rusty():
             ) for i in range(50)]
         ),
         class_="data-table"
-    ).render()
+    )
 
 def table_generation_air():
     """Air: Generate a table with 50 rows."""

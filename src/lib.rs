@@ -668,8 +668,8 @@ fn render_list_optimized(
     tag: &str,
     items: Vec<PyObject>,
     item_tag: &str,
-    class_name: Option<String>,
-    item_class_prefix: Option<String>
+    class_name: std::option::Option<String>,
+    item_class_prefix: std::option::Option<String>
 ) -> PyResult<HtmlString> {
     if items.is_empty() {
         let empty_tag = format!("<{tag}></{tag}>");
@@ -752,9 +752,9 @@ fn render_table_optimized(
     py: Python,
     headers: Vec<String>,
     rows: Vec<Vec<PyObject>>,
-    table_class: Option<String>,
-    header_class: Option<String>,
-    row_class_prefix: Option<String>
+    table_class: std::option::Option<String>,
+    header_class: std::option::Option<String>,
+    row_class_prefix: std::option::Option<String>
 ) -> PyResult<HtmlString> {
     if rows.is_empty() {
         return Ok(HtmlString::new("<table></table>".to_string()));
@@ -865,7 +865,7 @@ fn process_children_parallel(children: &[PyObject], py: Python) -> PyResult<Stri
 fn create_tag_immediate(
     tag_name: &str,
     children: Vec<PyObject>, 
-    kwargs: Option<&Bound<'_, PyDict>>,
+    kwargs: std::option::Option<&Bound<'_, PyDict>>,
     py: Python
 ) -> PyResult<String> {
     // Step 1: Separate actual children from attribute dictionaries
@@ -985,7 +985,7 @@ macro_rules! html_tag_optimized {
         #[doc = $doc]
         #[pyo3(signature = (*children, **kwargs))]
         #[inline(always)]
-        fn $name(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<String> {
+        fn $name(children: Vec<PyObject>, kwargs: std::option::Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<String> {
             let tag_name = normalize_tag_name(stringify!($name));
             create_tag_immediate(&tag_name, children, kwargs, py)
         }
@@ -1033,6 +1033,95 @@ html_tag_optimized!(Ol, "Defines an ordered list");
 html_tag_optimized!(Footer, "Defines a page footer");
 html_tag_optimized!(Thead, "Defines a table header group");
 html_tag_optimized!(Tbody, "Defines a table body group");
+
+// Additional HTML tags for full Air compatibility
+html_tag_optimized!(Abbr, "Defines an abbreviation or an acronym");
+html_tag_optimized!(Address, "Defines contact information for the author/owner of a document");
+html_tag_optimized!(Area, "Defines an area inside an image map");
+html_tag_optimized!(Article, "Defines an article");
+html_tag_optimized!(Audio, "Defines embedded sound content");
+html_tag_optimized!(Base, "Specifies the base URL/target for all relative URLs in a document");
+html_tag_optimized!(Bdi, "Isolates a part of text that might be formatted in a different direction from other text outside it");
+html_tag_optimized!(Bdo, "Overrides the current text direction");
+html_tag_optimized!(Blockquote, "Defines a section that is quoted from another source");
+html_tag_optimized!(Canvas, "Used to draw graphics, on the fly, via scripting (usually JavaScript)");
+html_tag_optimized!(Caption, "Defines a table caption");
+html_tag_optimized!(Cite, "Defines the title of a work");
+html_tag_optimized!(Col, "Specifies column properties for each column within a <colgroup> element");
+html_tag_optimized!(Colgroup, "Specifies a group of one or more columns in a table for formatting");
+html_tag_optimized!(Data, "Adds a machine-readable translation of a given content");
+html_tag_optimized!(Datalist, "Specifies a list of pre-defined options for input controls");
+html_tag_optimized!(Dd, "Defines a description/value of a term in a description list");
+html_tag_optimized!(Del, "Defines text that has been deleted from a document");
+html_tag_optimized!(Details, "Defines additional details that the user can view or hide");
+html_tag_optimized!(Dfn, "Specifies a term that is going to be defined within the content");
+html_tag_optimized!(Dialog, "Defines a dialog box or window");
+html_tag_optimized!(Dl, "Defines a description list");
+html_tag_optimized!(Dt, "Defines a term/name in a description list");
+html_tag_optimized!(Embed, "Defines a container for an external application");
+html_tag_optimized!(Fieldset, "Groups related elements in a form");
+html_tag_optimized!(Figcaption, "Defines a caption for a <figure> element");
+html_tag_optimized!(Figure, "Specifies self-contained content");
+html_tag_optimized!(Hgroup, "Defines a header and related content");
+html_tag_optimized!(Hr, "Defines a thematic change in the content");
+html_tag_optimized!(Iframe, "Defines an inline frame");
+html_tag_optimized!(Ins, "Defines a text that has been inserted into a document");
+html_tag_optimized!(Kbd, "Defines keyboard input");
+html_tag_optimized!(Legend, "Defines a caption for a <fieldset> element");
+html_tag_optimized!(Map, "Defines an image map");
+html_tag_optimized!(Mark, "Defines marked/highlighted text");
+html_tag_optimized!(Menu, "Defines an unordered list");
+html_tag_optimized!(Meta, "Defines metadata about an HTML document");
+html_tag_optimized!(Meter, "Defines a scalar measurement within a known range (a gauge)");
+html_tag_optimized!(Noscript, "Defines an alternate content for users that do not support client-side scripts");
+html_tag_optimized!(Object, "Defines a container for an external application");
+html_tag_optimized!(Optgroup, "Defines a group of related options in a drop-down list");
+// Create OptionElement with proper tag name
+#[pyfunction]
+#[doc = "Defines an option in a drop-down list"]
+#[pyo3(signature = (*children, **kwargs))]
+#[inline(always)]
+fn OptionElement(children: Vec<PyObject>, kwargs: std::option::Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<String> {
+    create_tag_immediate("option", children, kwargs, py)
+}
+
+// Alias for compatibility with Air
+#[pyfunction(name = "Option")]
+#[doc = "Defines an option in a drop-down list"]
+#[pyo3(signature = (*children, **kwargs))]
+#[inline(always)]
+fn option_tag_alias(children: Vec<PyObject>, kwargs: std::option::Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<String> {
+    create_tag_immediate("option", children, kwargs, py)
+}
+html_tag_optimized!(Output, "Defines the result of a calculation");
+html_tag_optimized!(Param, "Defines a parameter for an object");
+html_tag_optimized!(Picture, "Defines a container for multiple image resources");
+html_tag_optimized!(Pre, "Defines preformatted text");
+html_tag_optimized!(Progress, "Represents the progress of a task");
+html_tag_optimized!(Q, "Defines a short quotation");
+html_tag_optimized!(Rp, "Defines what to show in browsers that do not support ruby annotations");
+html_tag_optimized!(Rt, "Defines an explanation/pronunciation of characters (for East Asian typography)");
+html_tag_optimized!(Ruby, "Defines a ruby annotation (for East Asian typography)");
+html_tag_optimized!(S, "Defines text that is no longer correct");
+html_tag_optimized!(Samp, "Defines sample output from a computer program");
+html_tag_optimized!(Script, "Defines a client-side script");
+html_tag_optimized!(Search, "Defines a search section");
+html_tag_optimized!(Select, "Defines a drop-down list");
+html_tag_optimized!(Small, "Defines smaller text");
+html_tag_optimized!(Source, "Defines multiple media resources for media elements (<video> and <audio>)");
+html_tag_optimized!(Style, "Defines style information for a document");
+html_tag_optimized!(Sub, "Defines subscripted text");
+html_tag_optimized!(Summary, "Defines a visible heading for a <details> element");
+html_tag_optimized!(Sup, "Defines superscripted text");
+html_tag_optimized!(Template, "Defines a container for content that should be hidden when the page loads");
+html_tag_optimized!(Textarea, "Defines a multiline input control (text area)");
+html_tag_optimized!(Tfoot, "Groups the footer content in a table");
+html_tag_optimized!(Time, "Defines a specific time (or datetime)");
+html_tag_optimized!(Track, "Defines text tracks for media elements (<video> and <audio>)");
+html_tag_optimized!(U, "Defines some text that is unarticulated and styled differently from normal text");
+html_tag_optimized!(Var, "Defines a variable");
+html_tag_optimized!(Video, "Defines embedded video content");
+html_tag_optimized!(Wbr, "Defines a possible line-break");
 
 // Special optimized Html tag with automatic head/body separation
 #[pyfunction]
@@ -1270,6 +1359,80 @@ fn rusty_tags(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(Footer, m)?)?;
     m.add_function(wrap_pyfunction!(Thead, m)?)?;
     m.add_function(wrap_pyfunction!(Tbody, m)?)?;
+    
+    // Additional HTML tags for full Air compatibility
+    m.add_function(wrap_pyfunction!(Abbr, m)?)?;
+    m.add_function(wrap_pyfunction!(Address, m)?)?;
+    m.add_function(wrap_pyfunction!(Area, m)?)?;
+    m.add_function(wrap_pyfunction!(Article, m)?)?;
+    m.add_function(wrap_pyfunction!(Audio, m)?)?;
+    m.add_function(wrap_pyfunction!(Base, m)?)?;
+    m.add_function(wrap_pyfunction!(Bdi, m)?)?;
+    m.add_function(wrap_pyfunction!(Bdo, m)?)?;
+    m.add_function(wrap_pyfunction!(Blockquote, m)?)?;
+    m.add_function(wrap_pyfunction!(Canvas, m)?)?;
+    m.add_function(wrap_pyfunction!(Caption, m)?)?;
+    m.add_function(wrap_pyfunction!(Cite, m)?)?;
+    m.add_function(wrap_pyfunction!(Col, m)?)?;
+    m.add_function(wrap_pyfunction!(Colgroup, m)?)?;
+    m.add_function(wrap_pyfunction!(Data, m)?)?;
+    m.add_function(wrap_pyfunction!(Datalist, m)?)?;
+    m.add_function(wrap_pyfunction!(Dd, m)?)?;
+    m.add_function(wrap_pyfunction!(Del, m)?)?;
+    m.add_function(wrap_pyfunction!(Details, m)?)?;
+    m.add_function(wrap_pyfunction!(Dfn, m)?)?;
+    m.add_function(wrap_pyfunction!(Dialog, m)?)?;
+    m.add_function(wrap_pyfunction!(Dl, m)?)?;
+    m.add_function(wrap_pyfunction!(Dt, m)?)?;
+    m.add_function(wrap_pyfunction!(Embed, m)?)?;
+    m.add_function(wrap_pyfunction!(Fieldset, m)?)?;
+    m.add_function(wrap_pyfunction!(Figcaption, m)?)?;
+    m.add_function(wrap_pyfunction!(Figure, m)?)?;
+    m.add_function(wrap_pyfunction!(Hgroup, m)?)?;
+    m.add_function(wrap_pyfunction!(Hr, m)?)?;
+    m.add_function(wrap_pyfunction!(Iframe, m)?)?;
+    m.add_function(wrap_pyfunction!(Ins, m)?)?;
+    m.add_function(wrap_pyfunction!(Kbd, m)?)?;
+    m.add_function(wrap_pyfunction!(Legend, m)?)?;
+    m.add_function(wrap_pyfunction!(Map, m)?)?;
+    m.add_function(wrap_pyfunction!(Mark, m)?)?;
+    m.add_function(wrap_pyfunction!(Menu, m)?)?;
+    m.add_function(wrap_pyfunction!(Meta, m)?)?;
+    m.add_function(wrap_pyfunction!(Meter, m)?)?;
+    m.add_function(wrap_pyfunction!(Noscript, m)?)?;
+    m.add_function(wrap_pyfunction!(Object, m)?)?;
+    m.add_function(wrap_pyfunction!(Optgroup, m)?)?;
+    m.add_function(wrap_pyfunction!(OptionElement, m)?)?;
+    m.add_function(wrap_pyfunction!(option_tag_alias, m)?)?;
+    m.add_function(wrap_pyfunction!(Output, m)?)?;
+    m.add_function(wrap_pyfunction!(Param, m)?)?;
+    m.add_function(wrap_pyfunction!(Picture, m)?)?;
+    m.add_function(wrap_pyfunction!(Pre, m)?)?;
+    m.add_function(wrap_pyfunction!(Progress, m)?)?;
+    m.add_function(wrap_pyfunction!(Q, m)?)?;
+    m.add_function(wrap_pyfunction!(Rp, m)?)?;
+    m.add_function(wrap_pyfunction!(Rt, m)?)?;
+    m.add_function(wrap_pyfunction!(Ruby, m)?)?;
+    m.add_function(wrap_pyfunction!(S, m)?)?;
+    m.add_function(wrap_pyfunction!(Samp, m)?)?;
+    m.add_function(wrap_pyfunction!(Script, m)?)?;
+    m.add_function(wrap_pyfunction!(Search, m)?)?;
+    m.add_function(wrap_pyfunction!(Select, m)?)?;
+    m.add_function(wrap_pyfunction!(Small, m)?)?;
+    m.add_function(wrap_pyfunction!(Source, m)?)?;
+    m.add_function(wrap_pyfunction!(Style, m)?)?;
+    m.add_function(wrap_pyfunction!(Sub, m)?)?;
+    m.add_function(wrap_pyfunction!(Summary, m)?)?;
+    m.add_function(wrap_pyfunction!(Sup, m)?)?;
+    m.add_function(wrap_pyfunction!(Template, m)?)?;
+    m.add_function(wrap_pyfunction!(Textarea, m)?)?;
+    m.add_function(wrap_pyfunction!(Tfoot, m)?)?;
+    m.add_function(wrap_pyfunction!(Time, m)?)?;
+    m.add_function(wrap_pyfunction!(Track, m)?)?;
+    m.add_function(wrap_pyfunction!(U, m)?)?;
+    m.add_function(wrap_pyfunction!(Var, m)?)?;
+    m.add_function(wrap_pyfunction!(Video, m)?)?;
+    m.add_function(wrap_pyfunction!(Wbr, m)?)?;
     
     // Specialized optimization functions
     m.add_function(wrap_pyfunction!(render_list_optimized, m)?)?;
