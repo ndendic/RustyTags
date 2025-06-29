@@ -1,278 +1,118 @@
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use ahash::AHashMap as HashMap; // Faster hash algorithm - significant performance win
-use smallvec::{SmallVec, smallvec}; // Stack allocation for small collections
-use std::sync::OnceLock; // For thread-safe lazy static initialization
+use ahash::AHashMap as HashMap;
+use smallvec::{SmallVec, smallvec};
+use dashmap::DashMap;
+use once_cell::sync::Lazy;
+use std::borrow::Cow;
+use std::cell::RefCell;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use bumpalo::Bump;
 
-// Global string constants to avoid repeated allocations
-const EMPTY_STRING: &str = "";
-const SPACE: &str = " ";
-const QUOTE: &str = "\"";
-const EQUALS_QUOTE: &str = "=\"";
-const QUOTE_SPACE: &str = "\" ";
-const OPEN_BRACKET: &str = "<";
-const CLOSE_BRACKET: &str = ">";
-const CLOSE_TAG_PREFIX: &str = "</";
+// =============================================================================
+// MEMORY MANAGEMENT & OBJECT POOLING
+// =============================================================================
 
-// String interning for common HTML elements - reduces memory usage and improves cache locality
-static INTERNED_STRINGS: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
+// Thread-local string pool for efficient memory reuse
+thread_local! {
+    static STRING_POOL: RefCell<Vec<String>> = RefCell::new(Vec::with_capacity(32));
+    static ARENA_POOL: RefCell<Vec<Bump>> = RefCell::new(Vec::with_capacity(8));
+}
 
-fn get_interned_strings() -> &'static HashMap<&'static str, &'static str> {
-    INTERNED_STRINGS.get_or_init(|| {
-        let mut map = HashMap::default();
-        // Common tag names
-        map.insert("div", "div");
-        map.insert("span", "span");
-        map.insert("p", "p");
-        map.insert("a", "a");
-        map.insert("img", "img");
-        map.insert("input", "input");
-        map.insert("button", "button");
-        map.insert("form", "form");
-        map.insert("table", "table");
-        map.insert("tr", "tr");
-        map.insert("td", "td");
-        map.insert("th", "th");
-        map.insert("ul", "ul");
-        map.insert("ol", "ol");
-        map.insert("li", "li");
-        map.insert("h1", "h1");
-        map.insert("h2", "h2");
-        map.insert("h3", "h3");
-        map.insert("h4", "h4");
-        map.insert("h5", "h5");
-        map.insert("h6", "h6");
-        map.insert("script", "script");
-        // Common attribute names
-        map.insert("class", "class");
-        map.insert("id", "id");
-        map.insert("type", "type");
-        map.insert("name", "name");
-        map.insert("value", "value");
-        map.insert("href", "href");
-        map.insert("src", "src");
-        map.insert("alt", "alt");
-        map.insert("title", "title");
-        map.insert("for", "for");
-        map.insert("method", "method");
-        map.insert("action", "action");
-        map
+// Global stats for monitoring pool effectiveness
+static POOL_HITS: AtomicUsize = AtomicUsize::new(0);
+static POOL_MISSES: AtomicUsize = AtomicUsize::new(0);
+
+#[inline(always)]
+fn get_pooled_string(capacity: usize) -> String {
+    STRING_POOL.with(|pool| {
+        if let Some(mut s) = pool.borrow_mut().pop() {
+            s.clear();
+            if s.capacity() < capacity {
+                s.reserve(capacity - s.capacity());
+            }
+            POOL_HITS.fetch_add(1, Ordering::Relaxed);
+            s
+        } else {
+            POOL_MISSES.fetch_add(1, Ordering::Relaxed);
+            String::with_capacity(capacity)
+        }
     })
 }
 
-// Get interned string if available, otherwise return the original
+#[inline(always)]
+fn return_to_pool(s: String) {
+    // Only pool reasonably sized strings to prevent memory hoarding
+    if s.capacity() <= 2048 && s.capacity() >= 16 {
+        STRING_POOL.with(|pool| {
+            let mut pool = pool.borrow_mut();
+            if pool.len() < 64 {
+                pool.push(s);
+            }
+        });
+    }
+}
+
+// =============================================================================
+// LOCK-FREE CACHING SYSTEM
+// =============================================================================
+
+// Thread-local caches for hot paths
+thread_local! {
+    static LOCAL_ATTR_CACHE: RefCell<HashMap<String, Cow<'static, str>>> = 
+        RefCell::new(HashMap::with_capacity(128));
+    static LOCAL_TAG_CACHE: RefCell<HashMap<String, Cow<'static, str>>> = 
+        RefCell::new(HashMap::with_capacity(64));
+}
+
+// Global lock-free caches for fallback
+static GLOBAL_ATTR_CACHE: Lazy<DashMap<String, Cow<'static, str>>> = 
+    Lazy::new(|| DashMap::with_capacity(1000));
+static GLOBAL_TAG_CACHE: Lazy<DashMap<String, Cow<'static, str>>> = 
+    Lazy::new(|| DashMap::with_capacity(200));
+
+// String interning for ultimate memory efficiency
+static INTERNED_STRINGS: Lazy<DashMap<&'static str, &'static str>> = Lazy::new(|| {
+    let map = DashMap::with_capacity(200);
+    
+    // Common tag names
+    let tags = [
+        "div", "span", "p", "a", "img", "input", "button", "form",
+        "table", "tr", "td", "th", "ul", "ol", "li", "h1", "h2", 
+        "h3", "h4", "h5", "h6", "head", "body", "html", "title",
+        "meta", "link", "script", "style", "nav", "header", "footer",
+        "main", "section", "article", "aside", "details", "summary"
+    ];
+    
+    // Common attribute names  
+    let attrs = [
+        "class", "id", "type", "name", "value", "href", "src", "alt",
+        "title", "for", "method", "action", "target", "rel", "media",
+        "charset", "content", "property", "role", "data", "aria"
+    ];
+    
+    for &tag in &tags {
+        map.insert(tag, tag);
+    }
+    for &attr in &attrs {
+        map.insert(attr, attr);
+    }
+    
+    map
+});
+
 #[inline(always)]
 fn intern_string(s: &str) -> &str {
-    get_interned_strings().get(s).unwrap_or(&s)
+    INTERNED_STRINGS.get(s).map(|r| *r.value()).unwrap_or(s)
 }
 
-// Thread-safe cache for attribute mappings not covered by fast paths
-static ATTR_MAPPING_CACHE: OnceLock<std::sync::RwLock<HashMap<String, String>>> = OnceLock::new();
-
-fn get_attr_cache() -> &'static std::sync::RwLock<HashMap<String, String>> {
-    ATTR_MAPPING_CACHE.get_or_init(|| {
-        std::sync::RwLock::new(HashMap::default())
-    })
-}
-
-// Simple and fast attribute key fixing with caching
-#[inline(always)]
-fn fix_k_optimized(k: &str) -> String {
-    if k == "_" {
-        return k.to_string();
-    }
-    
-    // Fast path for small strings - most HTML attributes are short
-    if k.len() <= 16 {
-        let mut result = String::with_capacity(k.len());
-        let chars: Vec<char> = if k.starts_with('_') {
-            k.chars().skip(1).collect()
-        } else {
-            k.chars().collect()
-        };
-        
-        for ch in chars {
-            if ch == '_' {
-                result.push('-');
-            } else {
-                result.push(ch);
-            }
-        }
-        return result;
-    }
-    
-    // For longer strings, check cache first
-    let cache = get_attr_cache();
-    
-    // Try read lock first (fast path)
-    if let Ok(read_cache) = cache.read() {
-        if let Some(cached_result) = read_cache.get(k) {
-            return cached_result.clone();
-        }
-    }
-    
-    // Compute result and cache it
-    let result = k.strip_prefix('_').unwrap_or(k).replace('_', "-");
-    
-    // Write to cache (fallback if lock fails is just to return without caching)
-    if let Ok(mut write_cache) = cache.write() {
-        // Limit cache size to prevent memory growth
-        if write_cache.len() < 1000 {
-            write_cache.insert(k.to_string(), result.clone());
-        }
-    }
-    
-    result
-}
-
-// Fast attribute mapping with common case optimization + caching
-#[inline(always)]
-fn attrmap_optimized(attr: &str) -> String {
-    // Handle most common cases first - these cover 80% of usage
-    match attr {
-        "cls" => return intern_string("class").to_string(),
-        "_class" => return intern_string("class").to_string(),
-        "htmlClass" => return intern_string("class").to_string(),
-        "klass" => return intern_string("class").to_string(),
-        "_for" => return intern_string("for").to_string(),
-        "fr" => return intern_string("for").to_string(),
-        "htmlFor" => return intern_string("for").to_string(),
-        // Add more common fast paths
-        "id" => return intern_string("id").to_string(),
-        "type" => return intern_string("type").to_string(),
-        "name" => return intern_string("name").to_string(),
-        "value" => return intern_string("value").to_string(),
-        "href" => return intern_string("href").to_string(),
-        "src" => return intern_string("src").to_string(),
-        "alt" => return intern_string("alt").to_string(),
-        "title" => return intern_string("title").to_string(),
-        "method" => return intern_string("method").to_string(),
-        "action" => return intern_string("action").to_string(),
-        _ => {}
-    }
-    
-    // Fast special character check for remaining cases
-    if attr.contains('@') || attr.contains('.') || attr.contains('-') || 
-       attr.contains('!') || attr.contains('~') || attr.contains(':') ||
-       attr.contains('[') || attr.contains(']') || attr.contains('(') ||
-       attr.contains(')') || attr.contains('{') || attr.contains('}') ||
-       attr.contains('$') || attr.contains('%') || attr.contains('^') ||
-       attr.contains('&') || attr.contains('*') || attr.contains('+') ||
-       attr.contains('=') || attr.contains('|') || attr.contains('/') ||
-       attr.contains('?') || attr.contains('<') || attr.contains('>') ||
-       attr.contains(',') || attr.contains('`') {
-        return attr.to_string();
-    }
-    
-    fix_k_optimized(attr)
-}
-
-// Thread-safe cache for tag name normalization
-static TAG_NAME_CACHE: OnceLock<std::sync::RwLock<HashMap<String, String>>> = OnceLock::new();
-
-fn get_tag_cache() -> &'static std::sync::RwLock<HashMap<String, String>> {
-    TAG_NAME_CACHE.get_or_init(|| {
-        std::sync::RwLock::new(HashMap::default())
-    })
-}
-
-// Optimized tag name normalization with caching
-#[inline(always)]
-fn normalize_tag_name(tag_name: &str) -> String {
-    // Fast path for already lowercase strings
-    if tag_name.chars().all(|c| c.is_ascii_lowercase()) {
-        return intern_string(tag_name).to_string();
-    }
-    
-    let cache = get_tag_cache();
-    
-    // Try read lock first (fast path)
-    if let Ok(read_cache) = cache.read() {
-        if let Some(cached_result) = read_cache.get(tag_name) {
-            return cached_result.clone();
-        }
-    }
-    
-    // Compute result
-    let normalized = tag_name.to_ascii_lowercase();
-    let interned = intern_string(&normalized).to_string();
-    
-    // Cache the result
-    if let Ok(mut write_cache) = cache.write() {
-        // Limit cache size to prevent memory growth
-        if write_cache.len() < 100 {
-            write_cache.insert(tag_name.to_string(), interned.clone());
-        }
-    }
-    
-    interned
-}
-
-// High-performance string arena with simple, fast operations
-struct StringArena {
-    buffer: String,
-}
-
-impl StringArena {
-    #[inline(always)]
-    fn new(initial_capacity: usize) -> Self {
-        StringArena {
-            buffer: String::with_capacity(initial_capacity),
-        }
-    }
-    
-    #[inline(always)]
-    fn append(&mut self, s: &str) {
-        self.buffer.push_str(s);
-    }
-    
-    #[inline(always)]
-    fn append_char(&mut self, c: char) {
-        self.buffer.push(c);
-    }
-    
-    #[inline(always)]
-    fn into_string(self) -> String {
-        self.buffer
-    }
-}
-
-// Optimized attribute building with exact capacity calculation
-#[inline(always)]
-fn build_attributes_optimized(attrs: &HashMap<String, String>) -> String {
-    if attrs.is_empty() {
-        return String::new();
-    }
-    
-    // Pre-calculate exact capacity needed
-    let total_capacity: usize = attrs.iter()
-        .map(|(k, v)| {
-            let mapped_key_len = attrmap_optimized(k).len();
-            mapped_key_len + v.len() + 4 // +4 for =" " and quote
-        })
-        .sum::<usize>() + 1; // +1 for leading space
-    
-    let mut arena = StringArena::new(total_capacity);
-    arena.append_char(' ');
-    
-    // Process attributes in a single pass
-    for (k, v) in attrs {
-        let mapped_key = attrmap_optimized(k);
-        arena.append(&mapped_key);
-        arena.append(EQUALS_QUOTE);
-        arena.append(v);
-        arena.append(QUOTE_SPACE);
-    }
-    
-    let mut result = arena.into_string();
-    // Remove trailing space
-    result.pop();
-    result
-}
+// =============================================================================
+// OPTIMIZED ATTRIBUTE AND TAG PROCESSING
+// =============================================================================
 
 // Smart attribute value conversion with type support
 #[inline(always)]
-fn convert_attribute_value(value_obj: &Bound<'_, pyo3::PyAny>, py: Python) -> PyResult<String> {
+fn convert_attribute_value(value_obj: &Bound<'_, pyo3::PyAny>, _py: Python) -> PyResult<String> {
     // Fast path for strings
     if let Ok(s) = value_obj.extract::<String>() {
         return Ok(s);
@@ -322,6 +162,11 @@ fn process_child_object(child_obj: &PyObject, py: Python) -> PyResult<String> {
         return Ok(s.to_string());
     }
     
+    // Fast path for booleans
+    if let Ok(b) = child_obj.extract::<bool>(py) {
+        return Ok(if b { "true".to_string() } else { "false".to_string() });
+    }
+    
     // Fast path for integers  
     if let Ok(i) = child_obj.extract::<i64>(py) {
         let mut buffer = itoa::Buffer::new();
@@ -332,11 +177,6 @@ fn process_child_object(child_obj: &PyObject, py: Python) -> PyResult<String> {
     if let Ok(f) = child_obj.extract::<f64>(py) {
         let mut buffer = ryu::Buffer::new();
         return Ok(buffer.format(f).to_string());
-    }
-    
-    // Fast path for booleans
-    if let Ok(b) = child_obj.extract::<bool>(py) {
-        return Ok(if b { "true".to_string() } else { "false".to_string() });
     }
     
     let child_bound = child_obj.bind(py);
@@ -409,14 +249,160 @@ fn process_children_optimized(children: &[PyObject], py: Python) -> PyResult<Str
     
     // Larger collections use arena allocation
     let estimated_capacity = children.len() * 64; // Conservative estimate
-    let mut arena = StringArena::new(estimated_capacity);
+    let mut result = get_pooled_string(estimated_capacity);
     
     for child_obj in children {
         let child_str = process_child_object(child_obj, py)?;
-        arena.append(&child_str);
+        result.push_str(&child_str);
     }
     
-    Ok(arena.into_string())
+    Ok(result)
+}
+
+// Cached attribute key transformation
+#[inline(always)]
+fn fix_k_optimized(k: &str) -> String {
+    if k == "_" {
+        return "_".to_string();
+    }
+    
+    // Fast path for short strings
+    if k.len() <= 16 {
+        return if k.starts_with('_') {
+            k[1..].replace('_', "-")
+        } else {
+            k.replace('_', "-")
+        };
+    }
+    
+    // Check thread-local cache first
+    LOCAL_ATTR_CACHE.with(|cache| {
+        let cache_ref = cache.borrow();
+        if let Some(cached) = cache_ref.get(k) {
+            return cached.to_string();
+        }
+        drop(cache_ref);
+        
+        // Check global cache
+        if let Some(cached) = GLOBAL_ATTR_CACHE.get(k) {
+            let result = cached.to_string();
+            cache.borrow_mut().insert(k.to_string(), Cow::Owned(result.clone()));
+            return result;
+        }
+        
+        // Compute and cache
+        let result = if k.starts_with('_') {
+            k[1..].replace('_', "-")
+        } else {
+            k.replace('_', "-")
+        };
+        
+        cache.borrow_mut().insert(k.to_string(), Cow::Owned(result.clone()));
+        GLOBAL_ATTR_CACHE.insert(k.to_string(), Cow::Owned(result.clone()));
+        result
+    })
+}
+
+// Ultra-fast attribute mapping with comprehensive caching
+#[inline(always)]
+fn attrmap_optimized(attr: &str) -> String {
+    // Handle most common cases first - these cover 90% of usage
+    match attr {
+        "cls" | "_class" | "htmlClass" | "klass" | "class_" => return "class".to_string(),
+        "_for" | "fr" | "htmlFor" | "for_" => return "for".to_string(),
+        "id" => return "id".to_string(),
+        "type" | "type_" => return "type".to_string(),
+        "name" => return "name".to_string(),
+        "value" => return "value".to_string(),
+        "href" => return "href".to_string(),
+        "src" => return "src".to_string(),
+        "alt" => return "alt".to_string(),
+        "title" => return "title".to_string(),
+        "method" => return "method".to_string(),
+        "action" => return "action".to_string(),
+        "target" => return "target".to_string(),
+        "rel" => return "rel".to_string(),
+        _ => {}
+    }
+    
+    // Fast special character check
+    if attr.contains('@') || attr.contains('.') || attr.contains('-') || 
+       attr.contains('!') || attr.contains('~') || attr.contains(':') ||
+       attr.contains('[') || attr.contains(']') || attr.contains('(') ||
+       attr.contains(')') || attr.contains('{') || attr.contains('}') ||
+       attr.contains('$') || attr.contains('%') || attr.contains('^') ||
+       attr.contains('&') || attr.contains('*') || attr.contains('+') ||
+       attr.contains('=') || attr.contains('|') || attr.contains('/') ||
+       attr.contains('?') || attr.contains('<') || attr.contains('>') ||
+       attr.contains(',') || attr.contains('`') {
+        return attr.to_string();
+    }
+    
+    fix_k_optimized(attr)
+}
+
+// Cached tag name normalization
+#[inline(always)]
+fn normalize_tag_name(tag_name: &str) -> String {
+    // Fast path for already normalized strings
+    if tag_name.len() <= 16 && tag_name.chars().all(|c| c.is_ascii_lowercase()) {
+        return intern_string(tag_name).to_string();
+    }
+    
+    LOCAL_TAG_CACHE.with(|cache| {
+        let cache_ref = cache.borrow();
+        if let Some(cached) = cache_ref.get(tag_name) {
+            return cached.to_string();
+        }
+        drop(cache_ref);
+        
+        // Check global cache
+        if let Some(cached) = GLOBAL_TAG_CACHE.get(tag_name) {
+            let result = cached.to_string();
+            cache.borrow_mut().insert(tag_name.to_string(), Cow::Owned(result.clone()));
+            return result;
+        }
+        
+        // Compute using lowercase
+        let normalized = tag_name.to_ascii_lowercase();
+        let interned = intern_string(&normalized).to_string();
+        
+        cache.borrow_mut().insert(tag_name.to_string(), Cow::Owned(interned.clone()));
+        GLOBAL_TAG_CACHE.insert(tag_name.to_string(), Cow::Owned(interned.clone()));
+        interned
+    })
+}
+
+// Optimized attribute building with exact capacity calculation
+#[inline(always)]
+fn build_attributes_optimized(attrs: &HashMap<String, String>) -> String {
+    if attrs.is_empty() {
+        return String::new();
+    }
+    
+    // Pre-calculate exact capacity needed
+    let total_capacity: usize = attrs.iter()
+        .map(|(k, v)| {
+            let mapped_key_len = attrmap_optimized(k).len();
+            mapped_key_len + v.len() + 4 // +4 for =" " and quote
+        })
+        .sum::<usize>() + 1; // +1 for leading space
+    
+    let mut result = get_pooled_string(total_capacity);
+    result.push(' ');
+    
+    // Process attributes in a single pass
+    for (k, v) in attrs {
+        let mapped_key = attrmap_optimized(k);
+        result.push_str(&mapped_key);
+        result.push_str("=\"");
+        result.push_str(v);
+        result.push_str("\" ");
+    }
+    
+    // Remove trailing space
+    result.pop();
+    result
 }
 
 // Core HtmlString with optimized memory layout
@@ -470,19 +456,19 @@ fn build_html_tag_optimized(
     
     // Calculate exact capacity to avoid any reallocations
     let capacity = tag_lower.len() * 2 + attr_string.len() + children_string.len() + 5;
-    let mut arena = StringArena::new(capacity);
+    let mut result = get_pooled_string(capacity);
     
     // Build HTML in a single pass with minimal function calls
-    arena.append_char('<');
-    arena.append(&tag_lower);
-    arena.append(&attr_string);
-    arena.append_char('>');
-    arena.append(&children_string);
-    arena.append(CLOSE_TAG_PREFIX);
-    arena.append(&tag_lower);
-    arena.append_char('>');
+    result.push('<');
+    result.push_str(&tag_lower);
+    result.push_str(&attr_string);
+    result.push('>');
+    result.push_str(&children_string);
+    result.push_str("</");
+    result.push_str(&tag_lower);
+    result.push('>');
     
-    Ok(HtmlString::new(arena.into_string()))
+    Ok(HtmlString::new(result))
 }
 
 // Optimized macro with aggressive inlining and fast paths
@@ -499,17 +485,17 @@ macro_rules! html_tag_optimized {
                 let tag_name = normalize_tag_name(stringify!($name));
                 
                 let capacity = tag_name.len() * 2 + children_string.len() + 5;
-                let mut arena = StringArena::new(capacity);
+                let mut result = get_pooled_string(capacity);
                 
-                arena.append_char('<');
-                arena.append(&tag_name);
-                arena.append_char('>');
-                arena.append(&children_string);
-                arena.append(CLOSE_TAG_PREFIX);
-                arena.append(&tag_name);
-                arena.append_char('>');
+                result.push('<');
+                result.push_str(&tag_name);
+                result.push('>');
+                result.push_str(&children_string);
+                result.push_str("</");
+                result.push_str(&tag_name);
+                result.push('>');
                 
-                return Ok(HtmlString::new(arena.into_string()));
+                return Ok(HtmlString::new(result));
             }
             
             // Full path with attributes - use optimized HashMap
@@ -547,6 +533,7 @@ html_tag_optimized!(H5, "Defines a level 5 heading");
 html_tag_optimized!(H6, "Defines a level 6 heading");
 html_tag_optimized!(Head, "Defines the document head");
 html_tag_optimized!(Header, "Defines a page header");
+
 // Special handling for Html tag - includes DOCTYPE and auto head/body separation like Air
 #[pyfunction]
 #[doc = "Defines the HTML document"]
@@ -594,23 +581,24 @@ fn Html(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python)
     
     // Calculate capacity: DOCTYPE + html structure + head + body + attributes
     let capacity = 15 + 26 + attr_string.len() + head_string.len() + body_string.len(); // "<!doctype html><html><head></head><body></body></html>"
-    let mut arena = StringArena::new(capacity);
+    let mut result = get_pooled_string(capacity);
     
     // Build complete HTML structure like Air
-    arena.append("<!doctype html>");
-    arena.append("<html");
-    arena.append(&attr_string);
-    arena.append(">");
-    arena.append("<head>");
-    arena.append(&head_string);
-    arena.append("</head>");
-    arena.append("<body>");
-    arena.append(&body_string);
-    arena.append("</body>");
-    arena.append("</html>");
+    result.push_str("<!doctype html>");
+    result.push_str("<html");
+    result.push_str(&attr_string);
+    result.push_str(">");
+    result.push_str("<head>");
+    result.push_str(&head_string);
+    result.push_str("</head>");
+    result.push_str("<body>");
+    result.push_str(&body_string);
+    result.push_str("</body>");
+    result.push_str("</html>");
     
-    Ok(HtmlString::new(arena.into_string()))
+    Ok(HtmlString::new(result))
 }
+
 html_tag_optimized!(I, "Defines italic text");
 html_tag_optimized!(Img, "Defines an image");
 html_tag_optimized!(Input, "Defines an input field");
