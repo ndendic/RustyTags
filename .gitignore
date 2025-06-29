@@ -68,7 +68,11 @@ docs/_build/
 # VSCode
 .vscode/
 
+# Tests
+.tests/
+
 # Pyenv
 .python-version
 .env
 *.env
+CLAUDE.md
