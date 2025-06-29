@@ -5,15 +5,40 @@ build-backend = "maturin"
 [project]
 name = "rusty_tags"
 requires-python = ">=3.8"
+description = "High-performance HTML generation library with Rust-based Python extension"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "RustyTags Contributors"}
+]
+keywords = ["html", "web", "performance", "rust", "template"]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup :: HTML",
 ]
 dynamic = ["version"]
 dependencies = [
     "jinja2>=3.1.6",
     "mako>=1.3.10",
 ]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/rustyTags"
+Repository = "https://github.com/yourusername/rustyTags"
+Issues = "https://github.com/yourusername/rustyTags/issues"
+
 [tool.maturin]
 features = ["pyo3/extension-module"]

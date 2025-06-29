@@ -42,6 +42,7 @@ fn get_interned_strings() -> &'static HashMap<&'static str, &'static str> {
         map.insert("h4", "h4");
         map.insert("h5", "h5");
         map.insert("h6", "h6");
+        map.insert("script", "script");
         // Common attribute names
         map.insert("class", "class");
         map.insert("id", "id");
@@ -269,6 +270,124 @@ fn build_attributes_optimized(attrs: &HashMap<String, String>) -> String {
     result
 }
 
+// Smart attribute value conversion with type support
+#[inline(always)]
+fn convert_attribute_value(value_obj: &Bound<'_, pyo3::PyAny>, py: Python) -> PyResult<String> {
+    // Fast path for strings
+    if let Ok(s) = value_obj.extract::<String>() {
+        return Ok(s);
+    }
+    
+    // Fast path for booleans - check first since bool can be extracted as int
+    if let Ok(b) = value_obj.extract::<bool>() {
+        return Ok(if b { "true".to_string() } else { "false".to_string() });
+    }
+    
+    // Fast path for integers
+    if let Ok(i) = value_obj.extract::<i64>() {
+        let mut buffer = itoa::Buffer::new();
+        return Ok(buffer.format(i).to_string());
+    }
+    
+    // Fast path for floats
+    if let Ok(f) = value_obj.extract::<f64>() {
+        let mut buffer = ryu::Buffer::new();
+        return Ok(buffer.format(f).to_string());
+    }
+    
+    // Try to convert to string using __str__
+    if let Ok(str_result) = value_obj.str() {
+        if let Ok(str_value) = str_result.extract::<String>() {
+            return Ok(str_value);
+        }
+    }
+    
+    // Final fallback - get type name for error
+    let value_type = value_obj.get_type().name()?;
+    Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        format!("Cannot convert {} to string for HTML attribute", value_type)
+    ))
+}
+
+// Enhanced child processing with smart type conversion and __html__ support
+#[inline(always)]
+fn process_child_object(child_obj: &PyObject, py: Python) -> PyResult<String> {
+    // Fast path for HtmlString - direct access to content
+    if let Ok(html_string) = child_obj.extract::<PyRef<HtmlString>>(py) {
+        return Ok(html_string.content.clone());
+    }
+    
+    // Fast path for strings
+    if let Ok(s) = child_obj.extract::<&str>(py) {
+        return Ok(s.to_string());
+    }
+    
+    // Fast path for integers  
+    if let Ok(i) = child_obj.extract::<i64>(py) {
+        let mut buffer = itoa::Buffer::new();
+        return Ok(buffer.format(i).to_string());
+    }
+    
+    // Fast path for floats
+    if let Ok(f) = child_obj.extract::<f64>(py) {
+        let mut buffer = ryu::Buffer::new();
+        return Ok(buffer.format(f).to_string());
+    }
+    
+    // Fast path for booleans
+    if let Ok(b) = child_obj.extract::<bool>(py) {
+        return Ok(if b { "true".to_string() } else { "false".to_string() });
+    }
+    
+    let child_bound = child_obj.bind(py);
+    
+    // Check for __html__ method (common in web frameworks like Flask, Django)
+    if let Ok(html_method) = child_bound.getattr("__html__") {
+        if html_method.is_callable() {
+            if let Ok(html_result) = html_method.call0() {
+                if let Ok(html_str) = html_result.extract::<String>() {
+                    return Ok(html_str);
+                }
+            }
+        }
+    }
+    
+    // Check for _repr_html_ method (Jupyter/IPython style)
+    if let Ok(repr_html_method) = child_bound.getattr("_repr_html_") {
+        if repr_html_method.is_callable() {
+            if let Ok(html_result) = repr_html_method.call0() {
+                if let Ok(html_str) = html_result.extract::<String>() {
+                    return Ok(html_str);
+                }
+            }
+        }
+    }
+    
+    // Check for render method (common in template libraries)
+    if let Ok(render_method) = child_bound.getattr("render") {
+        if render_method.is_callable() {
+            if let Ok(render_result) = render_method.call0() {
+                if let Ok(render_str) = render_result.extract::<String>() {
+                    return Ok(render_str);
+                }
+            }
+        }
+    }
+    
+    // Try to convert to string using __str__
+    if let Ok(str_result) = child_bound.str() {
+        if let Ok(str_value) = str_result.extract::<String>() {
+            return Ok(str_value);
+        }
+    }
+    
+    // Final fallback - get type name for error
+    let child_type = child_bound.get_type().name()?;
+    Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        format!("Cannot convert {} to string for HTML content", child_type)
+    ))
+}
+
 // Fast child processing with type-specific paths and SmallVec optimization
 #[inline(always)]
 fn process_children_optimized(children: &[PyObject], py: Python) -> PyResult<String> {
@@ -281,33 +400,8 @@ fn process_children_optimized(children: &[PyObject], py: Python) -> PyResult<Str
         let mut result = String::with_capacity(children.len() * 32);
         
         for child_obj in children {
-            // Optimized type checking for small collections
-            if let Ok(html_string) = child_obj.extract::<PyRef<HtmlString>>(py) {
-                result.push_str(&html_string.content);
-                continue;
-            }
-            
-            if let Ok(s) = child_obj.extract::<&str>(py) {
-                result.push_str(s);
-                continue;
-            }
-            
-            if let Ok(i) = child_obj.extract::<i64>(py) {
-                let mut buffer = itoa::Buffer::new();
-                result.push_str(buffer.format(i));
-                continue;
-            }
-            
-            if let Ok(f) = child_obj.extract::<f64>(py) {
-                let mut buffer = ryu::Buffer::new();
-                result.push_str(buffer.format(f));
-                continue;
-            }
-            
-            let child_type = child_obj.bind(py).get_type().name()?;
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                format!("Unsupported child type: {}", child_type)
-            ));
+            let child_str = process_child_object(child_obj, py)?;
+            result.push_str(&child_str);
         }
         
         return Ok(result);
@@ -318,38 +412,8 @@ fn process_children_optimized(children: &[PyObject], py: Python) -> PyResult<Str
     let mut arena = StringArena::new(estimated_capacity);
     
     for child_obj in children {
-        // Fast path for HtmlString - direct access to content
-        if let Ok(html_string) = child_obj.extract::<PyRef<HtmlString>>(py) {
-            arena.append(&html_string.content);
-            continue;
-        }
-        
-        // Fast path for strings
-        if let Ok(s) = child_obj.extract::<&str>(py) {
-            arena.append(s);
-            continue;
-        }
-        
-        // Fast path for integers  
-        if let Ok(i) = child_obj.extract::<i64>(py) {
-            // Use faster integer to string conversion
-            let mut buffer = itoa::Buffer::new();
-            arena.append(buffer.format(i));
-            continue;
-        }
-        
-        // Fast path for floats
-        if let Ok(f) = child_obj.extract::<f64>(py) {
-            let mut buffer = ryu::Buffer::new();
-            arena.append(buffer.format(f));
-            continue;
-        }
-        
-        // Fallback for other types
-        let child_type = child_obj.bind(py).get_type().name()?;
-        return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-            format!("Unsupported child type: {}", child_type)
-        ));
+        let child_str = process_child_object(child_obj, py)?;
+        arena.append(&child_str);
     }
     
     Ok(arena.into_string())
@@ -454,7 +518,7 @@ macro_rules! html_tag_optimized {
             if let Some(kwargs) = kwargs {
                 for (key, value) in kwargs.iter() {
                     let key_str = key.extract::<String>()?;
-                    let value_str = value.extract::<String>()?;
+                    let value_str = convert_attribute_value(&value, py)?;
                     attrs.insert(key_str, value_str);
                 }
             }
@@ -494,7 +558,7 @@ fn Html(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python)
     if let Some(kwargs) = kwargs {
         for (key, value) in kwargs.iter() {
             let key_str = key.extract::<String>()?;
-            let value_str = value.extract::<String>()?;
+            let value_str = convert_attribute_value(&value, py)?;
             attrs.insert(key_str, value_str);
         }
     }
@@ -556,6 +620,7 @@ html_tag_optimized!(Link, "Defines a document link");
 html_tag_optimized!(Main, "Defines the main content");
 html_tag_optimized!(Nav, "Defines navigation links");
 html_tag_optimized!(P, "Defines a paragraph");
+html_tag_optimized!(Script, "Defines a client-side script");
 html_tag_optimized!(Section, "Defines a section");
 html_tag_optimized!(Span, "Defines an inline section");
 html_tag_optimized!(Strong, "Defines strong/important text");
@@ -566,6 +631,25 @@ html_tag_optimized!(Title, "Defines the document title");
 html_tag_optimized!(Tr, "Defines a table row");
 html_tag_optimized!(Ul, "Defines an unordered list");
 html_tag_optimized!(Ol, "Defines an ordered list");
+
+// Custom tag function for dynamic tag creation
+#[pyfunction]
+#[doc = "Creates a custom HTML tag with any tag name"]
+#[pyo3(signature = (tag_name, *children, **kwargs))]
+#[inline(always)]
+fn CustomTag(tag_name: String, children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<HtmlString> {
+    // Handle attributes if present - use optimized HashMap
+    let mut attrs = HashMap::default();
+    if let Some(kwargs) = kwargs {
+        for (key, value) in kwargs.iter() {
+            let key_str = key.extract::<String>()?;
+            let value_str = convert_attribute_value(&value, py)?;
+            attrs.insert(key_str, value_str);
+        }
+    }
+    
+    build_html_tag_optimized(&tag_name, children, attrs, py)
+}
 
 // Keep the old Tag class for backwards compatibility
 #[pyclass(subclass)]
@@ -612,13 +696,13 @@ impl Tag {
 impl Tag {
     #[new]
     #[pyo3(signature = (*children, **kwargs))]
-    fn new(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
+    fn new(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<Self> {
         let mut attrs = HashMap::default();
         
         if let Some(kwargs) = kwargs {
             for (key, value) in kwargs.iter() {
                 let key_str = key.extract::<String>()?;
-                let value_str = value.extract::<String>()?;
+                let value_str = convert_attribute_value(&value, py)?;
                 attrs.insert(key_str, value_str);
             }
         }
@@ -709,6 +793,7 @@ fn rusty_tags(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(Main, m)?)?;
     m.add_function(wrap_pyfunction!(Nav, m)?)?;
     m.add_function(wrap_pyfunction!(P, m)?)?;
+    m.add_function(wrap_pyfunction!(Script, m)?)?;
     m.add_function(wrap_pyfunction!(Section, m)?)?;
     m.add_function(wrap_pyfunction!(Span, m)?)?;
     m.add_function(wrap_pyfunction!(Strong, m)?)?;
@@ -719,6 +804,9 @@ fn rusty_tags(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(Tr, m)?)?;
     m.add_function(wrap_pyfunction!(Ul, m)?)?;
     m.add_function(wrap_pyfunction!(Ol, m)?)?;
+    
+    // Custom tag function
+    m.add_function(wrap_pyfunction!(CustomTag, m)?)?;
     
     Ok(())
 }
