@@ -7,7 +7,6 @@ A Rust-based Python extension for building HTML/SVG tags with optimized performa
 from .rusty_tags import (
     # Core classes
     HtmlString,
-    Tag,
     
     # HTML tags
     A, Aside, B, Body, Br, Button, Code, Div, Em, Form,
@@ -27,6 +26,14 @@ from .rusty_tags import (
     # Phase 2: Table Enhancement Tags
     Tbody, Thead, Tfoot, Caption, Col, Colgroup,
     
+    # All remaining HTML tags - comprehensive implementation
+    Abbr, Area, Audio, Base, Bdi, Bdo, Blockquote, Canvas, Cite,
+    Data, Datalist, Dd, Del, Dfn, Dialog, Dl, Dt, Embed, Fieldset,
+    Hgroup, Ins, Kbd, Legend, Map, Mark, Menu, Meter, Noscript,
+    Object, Optgroup, OptionEl, Picture, Pre, Progress, Q, Rp, Rt,
+    Ruby, S, Samp, Small, Source, Style, Sub, Sup, Template, Time,
+    Track, U, Var, Video, Wbr,
+    
     # Custom tag function
     CustomTag,
 )
@@ -38,7 +45,6 @@ __description__ = "High-performance HTML generation library with Rust-based Pyth
 __all__ = [
     # Core classes
     "HtmlString",
-    "Tag", 
     
     # HTML tags - organized alphabetically
     "A", "Aside", "B", "Body", "Br", "Button", "Code", "Div", "Em", "Form",
@@ -57,6 +63,14 @@ __all__ = [
     
     # Phase 2: Table Enhancement Tags - alphabetically
     "Caption", "Col", "Colgroup", "Tbody", "Tfoot", "Thead",
+    
+    # All remaining HTML tags - alphabetically
+    "Abbr", "Area", "Audio", "Base", "Bdi", "Bdo", "Blockquote", "Canvas", "Cite",
+    "Data", "Datalist", "Dd", "Del", "Dfn", "Dialog", "Dl", "Dt", "Embed", "Fieldset",
+    "Hgroup", "Ins", "Kbd", "Legend", "Map", "Mark", "Menu", "Meter", "Noscript",
+    "Object", "Optgroup", "OptionEl", "Picture", "Pre", "Progress", "Q", "Rp", "Rt",
+    "Ruby", "S", "Samp", "Small", "Source", "Style", "Sub", "Sup", "Template", "Time",
+    "Track", "U", "Var", "Video", "Wbr",
     
     # Custom tag function
     "CustomTag",

@@ -406,14 +406,27 @@ fn build_attributes_optimized(attrs: &HashMap<String, String>) -> String {
 }
 
 // Core HtmlString with optimized memory layout
-#[pyclass]
+#[pyclass(module = "rusty_tags")]
 pub struct HtmlString {
     #[pyo3(get)]
     content: String,
 }
 
+// TagBuilder for callable functionality - preserves tag structure
+#[pyclass]
+pub struct TagBuilder {
+    tag_name: String,
+    pub attrs: HashMap<String, String>,
+}
+
 #[pymethods]
 impl HtmlString {
+    #[new]
+    #[inline(always)]
+    fn py_new(content: String) -> Self {
+        HtmlString { content }
+    }
+    
     #[inline(always)]
     fn __str__(&self) -> &str {
         &self.content
@@ -433,12 +446,94 @@ impl HtmlString {
     fn _repr_html_(&self) -> &str {
         &self.content
     }
+    
+    #[inline(always)]
+    fn __html__(&self) -> &str {
+        &self.content
+    }
+    
+    // Pickle support using __getnewargs_ex__
+    #[inline(always)]
+    fn __getnewargs_ex__(&self, py: Python) -> PyResult<((String,), PyObject)> {
+        let args = (self.content.clone(),);
+        let kwargs = pyo3::types::PyDict::new(py);
+        Ok((args, kwargs.into()))
+    }
 }
 
 impl HtmlString {
     #[inline(always)]
     fn new(content: String) -> Self {
         HtmlString { content }
+    }
+}
+
+#[pymethods]
+impl TagBuilder {
+    #[new]
+    #[inline(always)]
+    fn new(tag_name: String) -> Self {
+        TagBuilder {
+            tag_name,
+            attrs: HashMap::default(),
+        }
+    }
+    
+    #[inline(always)]
+    #[pyo3(signature = (*children, **kwargs))]
+    fn __call__(&mut self, children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<HtmlString> {
+        // Merge new attributes with existing ones
+        if let Some(kwargs) = kwargs {
+            for (key, value) in kwargs.iter() {
+                let key_str = key.extract::<String>()?;
+                let value_str = convert_attribute_value(&value, py)?;
+                self.attrs.insert(key_str, value_str);
+            }
+        }
+        
+        // Build the final HTML using existing optimized functions
+        build_html_tag_optimized(&self.tag_name, children, self.attrs.clone(), py)
+    }
+    
+    #[inline(always)]
+    fn __str__(&self) -> PyResult<String> {
+        // Return empty tag without children for inspection
+        let tag_lower = normalize_tag_name(&self.tag_name);
+        let attr_string = build_attributes_optimized(&self.attrs);
+        
+        let capacity = tag_lower.len() * 2 + attr_string.len() + 5;
+        let mut result = get_pooled_string(capacity);
+        
+        result.push('<');
+        result.push_str(&tag_lower);
+        result.push_str(&attr_string);
+        result.push_str("/>");
+        
+        Ok(result)
+    }
+    
+    #[inline(always)]
+    fn __repr__(&self) -> PyResult<String> {
+        // Return empty tag without children for inspection
+        self.__str__()
+    }
+    
+    #[inline(always)]
+    fn render(&self) -> PyResult<String> {
+        // Return empty tag without children for inspection
+        self.__str__()
+    }
+    
+    #[inline(always)]
+    fn _repr_html_(&self) -> PyResult<String> {
+        // Return empty tag without children for inspection
+        self.__str__()
+    }
+    
+    #[inline(always)]
+    fn __html__(&self) -> PyResult<String> {
+        // Return empty tag without children for inspection
+        self.__str__()
     }
 }
 
@@ -478,8 +573,30 @@ macro_rules! html_tag_optimized {
         #[doc = $doc]
         #[pyo3(signature = (*children, **kwargs))]
         #[inline(always)]
-        fn $name(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<HtmlString> {
-            // Fast path for no attributes
+        fn $name(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<PyObject> {
+            // If no children AND no attributes, return TagBuilder for chaining
+            if children.is_empty() && kwargs.is_none() {
+                let tag_builder = TagBuilder::new(stringify!($name).to_string());
+                return Ok(Py::new(py, tag_builder)?.into());
+            }
+            
+            // If no children but has attributes, create self-closing tag immediately
+            if children.is_empty() {
+                let mut attrs = HashMap::default();
+                
+                if let Some(kwargs) = kwargs {
+                    for (key, value) in kwargs.iter() {
+                        let key_str = key.extract::<String>()?;
+                        let value_str = convert_attribute_value(&value, py)?;
+                        attrs.insert(key_str, value_str);
+                    }
+                }
+                
+                let html_string = build_html_tag_optimized(stringify!($name), children, attrs, py)?;
+                return Ok(Py::new(py, html_string)?.into());
+            }
+            
+            // Fast path for no attributes but with children
             if kwargs.is_none() {
                 let children_string = process_children_optimized(&children, py)?;
                 let tag_name = normalize_tag_name(stringify!($name));
@@ -495,7 +612,8 @@ macro_rules! html_tag_optimized {
                 result.push_str(&tag_name);
                 result.push('>');
                 
-                return Ok(HtmlString::new(result));
+                let html_string = HtmlString::new(result);
+                return Ok(Py::new(py, html_string)?.into());
             }
             
             // Full path with attributes - use optimized HashMap
@@ -509,7 +627,8 @@ macro_rules! html_tag_optimized {
                 }
             }
             
-            build_html_tag_optimized(stringify!($name), children, attrs, py)
+            let html_string = build_html_tag_optimized(stringify!($name), children, attrs, py)?;
+            Ok(Py::new(py, html_string)?.into())
         }
     };
 }
@@ -550,50 +669,20 @@ fn Html(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python)
         }
     }
     
-    // Separate head and body content automatically like Air does
-    // Use SmallVec for stack allocation - most HTML has few head elements
-    let mut head_content: SmallVec<[PyObject; 4]> = smallvec![];
-    let mut body_content: SmallVec<[PyObject; 8]> = smallvec![];
-    
-    for child_obj in children {
-        // Check if this is a head-specific tag by looking at the content string
-        if let Ok(html_string) = child_obj.extract::<PyRef<HtmlString>>(py) {
-            let content = &html_string.content;
-            // Check if content starts with head-specific tags
-            if content.starts_with("<title") || content.starts_with("<link") || 
-               content.starts_with("<meta") || content.starts_with("<style") || 
-               content.starts_with("<script") || content.starts_with("<base") {
-                head_content.push(child_obj);
-            } else {
-                body_content.push(child_obj);
-            }
-        } else {
-            // Non-HtmlString content goes to body
-            body_content.push(child_obj);
-        }
-    }
-    
-    // Process head and body content separately
-    let head_string = process_children_optimized(&head_content, py)?;
-    let body_string = process_children_optimized(&body_content, py)?;
-    
+    // Process all children directly - no automatic separation
+    let children_string = process_children_optimized(&children, py)?;
     let attr_string = build_attributes_optimized(&attrs);
     
-    // Calculate capacity: DOCTYPE + html structure + head + body + attributes
-    let capacity = 15 + 26 + attr_string.len() + head_string.len() + body_string.len(); // "<!doctype html><html><head></head><body></body></html>"
+    // Calculate capacity: DOCTYPE + html structure + children + attributes
+    let capacity = 15 + 17 + attr_string.len() + children_string.len(); // "<!doctype html><html></html>"
     let mut result = get_pooled_string(capacity);
     
-    // Build complete HTML structure like Air
+    // Build HTML structure with all children directly inside
     result.push_str("<!doctype html>");
     result.push_str("<html");
     result.push_str(&attr_string);
     result.push_str(">");
-    result.push_str("<head>");
-    result.push_str(&head_string);
-    result.push_str("</head>");
-    result.push_str("<body>");
-    result.push_str(&body_string);
-    result.push_str("</body>");
+    result.push_str(&children_string);
     result.push_str("</html>");
     
     Ok(HtmlString::new(result))
@@ -666,6 +755,60 @@ html_tag_optimized!(Mask, "Defines a mask in SVG");
 html_tag_optimized!(Image, "Defines an image in SVG");
 html_tag_optimized!(ForeignObject, "Defines foreign content in SVG");
 
+// All remaining HTML tags - comprehensive implementation
+html_tag_optimized!(Abbr, "Defines an abbreviation");
+html_tag_optimized!(Area, "Defines an area in an image map");
+html_tag_optimized!(Audio, "Defines audio content");
+html_tag_optimized!(Base, "Defines the base URL for all relative URLs");
+html_tag_optimized!(Bdi, "Defines bidirectional text isolation");
+html_tag_optimized!(Bdo, "Defines bidirectional text override");
+html_tag_optimized!(Blockquote, "Defines a block quotation");
+html_tag_optimized!(Canvas, "Defines a graphics canvas");
+html_tag_optimized!(Cite, "Defines a citation");
+html_tag_optimized!(Data, "Defines machine-readable data");
+html_tag_optimized!(Datalist, "Defines a list of input options");
+html_tag_optimized!(Dd, "Defines a description in a description list");
+html_tag_optimized!(Del, "Defines deleted text");
+html_tag_optimized!(Dfn, "Defines a definition term");
+html_tag_optimized!(Dialog, "Defines a dialog box");
+html_tag_optimized!(Dl, "Defines a description list");
+html_tag_optimized!(Dt, "Defines a term in a description list");
+html_tag_optimized!(Embed, "Defines external content");
+html_tag_optimized!(Fieldset, "Defines a fieldset for form controls");
+html_tag_optimized!(Hgroup, "Defines a heading group");
+html_tag_optimized!(Ins, "Defines inserted text");
+html_tag_optimized!(Kbd, "Defines keyboard input");
+html_tag_optimized!(Legend, "Defines a caption for a fieldset");
+html_tag_optimized!(Map, "Defines an image map");
+html_tag_optimized!(Mark, "Defines highlighted text");
+html_tag_optimized!(Menu, "Defines a menu list");
+html_tag_optimized!(Meter, "Defines a scalar measurement");
+html_tag_optimized!(Noscript, "Defines content for users without script support");
+html_tag_optimized!(Object, "Defines an embedded object");
+html_tag_optimized!(Optgroup, "Defines a group of options in a select list");
+html_tag_optimized!(OptionEl, "Defines an option in a select list");
+html_tag_optimized!(Picture, "Defines a picture container");
+html_tag_optimized!(Pre, "Defines preformatted text");
+html_tag_optimized!(Progress, "Defines progress of a task");
+html_tag_optimized!(Q, "Defines a short quotation");
+html_tag_optimized!(Rp, "Defines ruby parentheses");
+html_tag_optimized!(Rt, "Defines ruby text");
+html_tag_optimized!(Ruby, "Defines ruby annotation");
+html_tag_optimized!(S, "Defines strikethrough text");
+html_tag_optimized!(Samp, "Defines sample computer output");
+html_tag_optimized!(Small, "Defines small text");
+html_tag_optimized!(Source, "Defines media resources");
+html_tag_optimized!(Style, "Defines style information");
+html_tag_optimized!(Sub, "Defines subscript text");
+html_tag_optimized!(Sup, "Defines superscript text");
+html_tag_optimized!(Template, "Defines a template container");
+html_tag_optimized!(Time, "Defines date/time information");
+html_tag_optimized!(Track, "Defines media track");
+html_tag_optimized!(U, "Defines underlined text");
+html_tag_optimized!(Var, "Defines a variable");
+html_tag_optimized!(Video, "Defines video content");
+html_tag_optimized!(Wbr, "Defines a word break opportunity");
+
 // Custom tag function for dynamic tag creation
 #[pyfunction]
 #[doc = "Creates a custom HTML tag with any tag name"]
@@ -685,118 +828,22 @@ fn CustomTag(tag_name: String, children: Vec<PyObject>, kwargs: Option<&Bound<'_
     build_html_tag_optimized(&tag_name, children, attrs, py)
 }
 
-// Keep the old Tag class for backwards compatibility
-#[pyclass(subclass)]
-pub struct Tag {
-    #[pyo3(get)]
-    _name: String,
-    #[pyo3(get)]  
-    _module: String,
-    _children: Vec<PyObject>,
-    _attrs: HashMap<String, String>,
+// Factory function for pickle support
+#[pyfunction]
+#[doc = "Internal factory function for creating HtmlString objects (used by pickle)"]
+#[inline(always)]
+fn create_html_string(content: String) -> HtmlString {
+    HtmlString::new(content)
 }
 
-impl Tag {
-    fn render_child(&self, child_obj: &PyObject, py: Python) -> PyResult<String> {
-        if let Ok(html_string) = child_obj.extract::<PyRef<HtmlString>>(py) {
-            return Ok(html_string.content.clone());
-        }
-        if let Ok(tag) = child_obj.extract::<PyRef<Tag>>(py) {
-            return tag.render(py);
-        }
-        if let Ok(s) = child_obj.extract::<String>(py) {
-            return Ok(s);
-        }
-        if let Ok(i) = child_obj.extract::<i64>(py) {
-            return Ok(i.to_string());
-        }
-        if let Ok(f) = child_obj.extract::<f64>(py) {
-            return Ok(f.to_string());
-        }
-        
-        let child_type = child_obj.bind(py).get_type().name()?;
-        let error_msg = format!(
-            "Unsupported child type: {}\n in tag {}\n child {:?}\n data {:?}",
-            child_type,
-            self.name(),
-            child_obj,
-            self._attrs
-        );
-        Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(error_msg))
-    }
-}
 
-#[pymethods]
-impl Tag {
-    #[new]
-    #[pyo3(signature = (*children, **kwargs))]
-    fn new(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<Self> {
-        let mut attrs = HashMap::default();
-        
-        if let Some(kwargs) = kwargs {
-            for (key, value) in kwargs.iter() {
-                let key_str = key.extract::<String>()?;
-                let value_str = convert_attribute_value(&value, py)?;
-                attrs.insert(key_str, value_str);
-            }
-        }
-        
-        Ok(Tag {
-            _name: "Tag".to_string(),
-            _module: "rusty_tags".to_string(),
-            _children: children,
-            _attrs: attrs,
-        })
-    }
-    
-    #[getter]
-    fn name(&self) -> String {
-        normalize_tag_name(&self._name)
-    }
-    
-    #[getter]
-    fn attrs(&self) -> String {
-        build_attributes_optimized(&self._attrs)
-    }
-    
-    #[getter]
-    fn children(&self, py: Python) -> PyResult<String> {
-        let mut elements = Vec::new();
-        
-        for child_obj in &self._children {
-            elements.push(self.render_child(child_obj, py)?);
-        }
-        
-        Ok(elements.join(""))
-    }
-    
-    fn render(&self, py: Python) -> PyResult<String> {
-        let name = self.name();
-        let attrs = self.attrs();
-        let children = self.children(py)?;
-        
-        Ok(format!("<{}{}>{}</{}>", name, attrs, children, name))
-    }
-    
-    fn __repr__(&self, py: Python) -> PyResult<String> {
-        self.render(py)
-    }
-    
-    fn __str__(&self, py: Python) -> PyResult<String> {
-        self.render(py)
-    }
-    
-    fn _repr_html_(&self, py: Python) -> PyResult<String> {
-        self.render(py)
-    }
-}
 
 /// A Python module implemented in Rust.
 #[pymodule]
 fn rusty_tags(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Core classes
     m.add_class::<HtmlString>()?;
-    m.add_class::<Tag>()?; // For backwards compatibility
+    m.add_class::<TagBuilder>()?;
     
     // Optimized HTML tag functions
     m.add_function(wrap_pyfunction!(A, m)?)?;
@@ -885,8 +932,65 @@ fn rusty_tags(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(Image, m)?)?;
     m.add_function(wrap_pyfunction!(ForeignObject, m)?)?;
     
+    // All remaining HTML tags
+    m.add_function(wrap_pyfunction!(Abbr, m)?)?;
+    m.add_function(wrap_pyfunction!(Area, m)?)?;
+    m.add_function(wrap_pyfunction!(Audio, m)?)?;
+    m.add_function(wrap_pyfunction!(Base, m)?)?;
+    m.add_function(wrap_pyfunction!(Bdi, m)?)?;
+    m.add_function(wrap_pyfunction!(Bdo, m)?)?;
+    m.add_function(wrap_pyfunction!(Blockquote, m)?)?;
+    m.add_function(wrap_pyfunction!(Canvas, m)?)?;
+    m.add_function(wrap_pyfunction!(Cite, m)?)?;
+    m.add_function(wrap_pyfunction!(Data, m)?)?;
+    m.add_function(wrap_pyfunction!(Datalist, m)?)?;
+    m.add_function(wrap_pyfunction!(Dd, m)?)?;
+    m.add_function(wrap_pyfunction!(Del, m)?)?;
+    m.add_function(wrap_pyfunction!(Dfn, m)?)?;
+    m.add_function(wrap_pyfunction!(Dialog, m)?)?;
+    m.add_function(wrap_pyfunction!(Dl, m)?)?;
+    m.add_function(wrap_pyfunction!(Dt, m)?)?;
+    m.add_function(wrap_pyfunction!(Embed, m)?)?;
+    m.add_function(wrap_pyfunction!(Fieldset, m)?)?;
+    m.add_function(wrap_pyfunction!(Hgroup, m)?)?;
+    m.add_function(wrap_pyfunction!(Ins, m)?)?;
+    m.add_function(wrap_pyfunction!(Kbd, m)?)?;
+    m.add_function(wrap_pyfunction!(Legend, m)?)?;
+    m.add_function(wrap_pyfunction!(Map, m)?)?;
+    m.add_function(wrap_pyfunction!(Mark, m)?)?;
+    m.add_function(wrap_pyfunction!(Menu, m)?)?;
+    m.add_function(wrap_pyfunction!(Meter, m)?)?;
+    m.add_function(wrap_pyfunction!(Noscript, m)?)?;
+    m.add_function(wrap_pyfunction!(Object, m)?)?;
+    m.add_function(wrap_pyfunction!(Optgroup, m)?)?;
+    m.add_function(wrap_pyfunction!(OptionEl, m)?)?;
+    m.add_function(wrap_pyfunction!(Picture, m)?)?;
+    m.add_function(wrap_pyfunction!(Pre, m)?)?;
+    m.add_function(wrap_pyfunction!(Progress, m)?)?;
+    m.add_function(wrap_pyfunction!(Q, m)?)?;
+    m.add_function(wrap_pyfunction!(Rp, m)?)?;
+    m.add_function(wrap_pyfunction!(Rt, m)?)?;
+    m.add_function(wrap_pyfunction!(Ruby, m)?)?;
+    m.add_function(wrap_pyfunction!(S, m)?)?;
+    m.add_function(wrap_pyfunction!(Samp, m)?)?;
+    m.add_function(wrap_pyfunction!(Small, m)?)?;
+    m.add_function(wrap_pyfunction!(Source, m)?)?;
+    m.add_function(wrap_pyfunction!(Style, m)?)?;
+    m.add_function(wrap_pyfunction!(Sub, m)?)?;
+    m.add_function(wrap_pyfunction!(Sup, m)?)?;
+    m.add_function(wrap_pyfunction!(Template, m)?)?;
+    m.add_function(wrap_pyfunction!(Time, m)?)?;
+    m.add_function(wrap_pyfunction!(Track, m)?)?;
+    m.add_function(wrap_pyfunction!(U, m)?)?;
+    m.add_function(wrap_pyfunction!(Var, m)?)?;
+    m.add_function(wrap_pyfunction!(Video, m)?)?;
+    m.add_function(wrap_pyfunction!(Wbr, m)?)?;
+    
     // Custom tag function
     m.add_function(wrap_pyfunction!(CustomTag, m)?)?;
+    
+    // Factory function for pickle support
+    m.add_function(wrap_pyfunction!(create_html_string, m)?)?;
     
     Ok(())
 }
