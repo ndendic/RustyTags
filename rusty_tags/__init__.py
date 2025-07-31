@@ -1,12 +1,15 @@
+from .rusty_tags import HtmlString as RustyHtmlString
 """
 RustyTags - High-performance HTML generation library
 
 A Rust-based Python extension for building HTML/SVG tags with optimized performance.
 """
+HtmlString = RustyHtmlString
+HtmlString.__ft__ = lambda self: self
 
-from .rusty_tags import (
+from .rusty_tags import (  # noqa: E402
     # Core classes
-    HtmlString,
+    TagBuilder,
     
     # HTML tags
     A, Aside, B, Body, Br, Button, Code, Div, Em, Form,
@@ -44,7 +47,7 @@ __description__ = "High-performance HTML generation library with Rust-based Pyth
 
 __all__ = [
     # Core classes
-    "HtmlString",
+    "HtmlString", "TagBuilder",
     
     # HTML tags - organized alphabetically
     "A", "Aside", "B", "Body", "Br", "Button", "Code", "Div", "Em", "Form",

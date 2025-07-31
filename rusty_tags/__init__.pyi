@@ -31,7 +31,6 @@ class TagBuilder:
     def _repr_html_(self) -> str: ...
     def __html__(self) -> str: ...
 
-
 # HTML Tag Functions with overloads for callable functionality
 
 @overload

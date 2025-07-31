@@ -451,6 +451,7 @@ impl HtmlString {
     fn __html__(&self) -> &str {
         &self.content
     }
+
     
     // Pickle support using __getnewargs_ex__
     #[inline(always)]
@@ -535,6 +536,7 @@ impl TagBuilder {
         // Return empty tag without children for inspection
         self.__str__()
     }
+
 }
 
 // Optimized tag builder with minimal allocations
