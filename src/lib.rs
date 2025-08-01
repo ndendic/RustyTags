@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyDict, PyList};
 use ahash::AHashMap as HashMap;
 use smallvec::{SmallVec, smallvec};
 use dashmap::DashMap;
@@ -8,6 +8,412 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use bumpalo::Bump;
+use serde::{Deserialize, Serialize};
+use serde_json;
+use pythonize;
+
+// =============================================================================
+// DATASTAR INTEGRATION - CORE TYPE SYSTEM
+// =============================================================================
+
+/// Represents different types of values for Datastar attributes
+/// Optimized for performance with intelligent JavaScript type handling
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DatastarValue {
+    /// JavaScript expression (no quotes, direct output) - $signal, @action
+    Expression(String),
+    
+    /// JSON for objects/arrays - will be serialized as-is
+    Json(String),
+    
+    /// JavaScript string literal - will be quoted: 'value'
+    String(String),
+    
+    /// JavaScript number - direct output: 42, 3.14
+    Number(f64),
+    
+    /// JavaScript boolean - direct output: true/false
+    Boolean(bool),
+    
+    /// JavaScript null
+    Null,
+    
+    /// Raw HTML (won't be escaped) - for advanced use cases
+    Raw(String),
+}
+
+impl DatastarValue {
+    /// Convert a Python value to a DatastarValue with intelligent type detection
+    #[inline]
+    pub fn from_python(py_value: &Bound<'_, pyo3::PyAny>) -> PyResult<Self> {
+        // Handle None/null first
+        if py_value.is_none() {
+            return Ok(DatastarValue::Null);
+        }
+        
+        // Fast path for booleans (check before numbers since bool can be extracted as int)
+        if let Ok(b) = py_value.extract::<bool>() {
+            return Ok(DatastarValue::Boolean(b));
+        }
+        
+        // Fast path for numbers
+        if let Ok(i) = py_value.extract::<i64>() {
+            return Ok(DatastarValue::Number(i as f64));
+        }
+        if let Ok(f) = py_value.extract::<f64>() {
+            return Ok(DatastarValue::Number(f));
+        }
+        
+        // Handle strings with Datastar expression detection
+        if let Ok(s) = py_value.extract::<String>() {
+            // Detect Datastar expressions by common patterns
+            if s.starts_with('$') ||           // $signal
+               s.starts_with('@') ||           // @action
+               s.contains("$") ||              // Contains signal references
+               s.contains("@") ||              // Contains action references
+               s.starts_with("new ") ||        // JavaScript constructors
+               s.contains("()") ||             // Function calls
+               s.contains("===") ||            // Strict equality
+               s.contains("!==") ||            // Strict inequality
+               s.contains("&&") ||             // Logical AND
+               s.contains("||") ||             // Logical OR
+               s.contains("Date.") ||          // Date methods
+               s.contains(".length") ||        // Array/string length
+               s.contains(".push(") ||         // Array methods
+               s.contains(".pop(") ||
+               s.contains(".splice(") ||
+               s.contains("window.") ||        // Browser globals
+               s.contains("document.") {       // DOM access
+                return Ok(DatastarValue::Expression(s));
+            } else {
+                return Ok(DatastarValue::String(s));
+            }
+        }
+        
+        // Handle dictionaries and lists as JSON
+        if py_value.is_instance_of::<PyDict>() || py_value.is_instance_of::<PyList>() {
+            // Convert Python object to serde_json::Value for serialization
+            let json_value: serde_json::Value = pythonize::depythonize(py_value)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    format!("Failed to convert Python object to JSON: {}", e)
+                ))?;
+            let json_string = serde_json::to_string(&json_value)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    format!("Failed to serialize to JSON: {}", e)
+                ))?;
+            return Ok(DatastarValue::Json(json_string));
+        }
+        
+        // Final fallback - convert to string
+        if let Ok(str_result) = py_value.str() {
+            if let Ok(str_value) = str_result.extract::<String>() {
+                return Ok(DatastarValue::String(str_value));
+            }
+        }
+        
+        // Error case
+        let value_type = py_value.get_type().name()?;
+        Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+            format!("Cannot convert {} to DatastarValue", value_type)
+        ))
+    }
+    
+    /// Convert to HTML attribute value with proper JavaScript formatting
+    #[inline]
+    pub fn to_html_attr(&self) -> String {
+        match self {
+            DatastarValue::Expression(expr) => expr.clone(),
+            DatastarValue::String(s) => {
+                // Escape single quotes and wrap in quotes
+                format!("'{}'", s.replace('\'', "\\'"))
+            },
+            DatastarValue::Boolean(b) => b.to_string(),
+            DatastarValue::Number(n) => {
+                // Use optimized number formatting
+                if n.fract() == 0.0 && *n >= i64::MIN as f64 && *n <= i64::MAX as f64 {
+                    // Integer path using itoa for speed
+                    let mut buffer = itoa::Buffer::new();
+                    buffer.format(*n as i64).to_string()
+                } else {
+                    // Float path using ryu for speed
+                    let mut buffer = ryu::Buffer::new();
+                    buffer.format(*n).to_string()
+                }
+            },
+            DatastarValue::Json(json) => json.clone(),
+            DatastarValue::Null => "null".to_string(),
+            DatastarValue::Raw(raw) => raw.clone(),
+        }
+    }
+    
+    /// Get memory footprint for capacity planning
+    #[inline]
+    pub fn memory_size(&self) -> usize {
+        match self {
+            DatastarValue::Expression(s) => s.len(),
+            DatastarValue::String(s) => s.len() + 2, // +2 for quotes
+            DatastarValue::Json(s) => s.len(),
+            DatastarValue::Raw(s) => s.len(),
+            DatastarValue::Boolean(_) => 5, // "false".len()
+            DatastarValue::Number(_) => 16, // Conservative estimate
+            DatastarValue::Null => 4, // "null".len()
+        }
+    }
+}
+
+// Thread-local cache for Datastar transformations
+thread_local! {
+    static DATASTAR_ATTR_CACHE: RefCell<HashMap<String, (String, DatastarValue)>> = 
+        RefCell::new(HashMap::with_capacity(128));
+}
+
+// =============================================================================
+// DATASTAR ATTRIBUTE HANDLER SYSTEM
+// =============================================================================
+
+/// Trait for handling different types of Datastar attributes
+pub trait DatastarHandler {
+    /// Check if this handler can process the given attribute key
+    fn can_handle(&self, key: &str) -> bool;
+    
+    /// Process the attribute key and Python value into a data-* attribute
+    fn process(&self, key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)>;
+    
+    /// Priority for handler ordering (higher = more specific, checked first)
+    fn priority(&self) -> u8;
+}
+
+/// Handler for ds_signals attribute - converts to data-signals JSON
+pub struct SignalsHandler;
+
+impl DatastarHandler for SignalsHandler {
+    #[inline]
+    fn can_handle(&self, key: &str) -> bool {
+        key == "ds_signals"
+    }
+    
+    #[inline]
+    fn process(&self, _key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
+        let datastar_value = DatastarValue::from_python(value)?;
+        
+        // For signals, we always want JSON format regardless of input type
+        let json_value = match datastar_value {
+            DatastarValue::Json(json) => json,
+            DatastarValue::String(s) => {
+                // Parse string as JSON if possible, otherwise create simple object
+                serde_json::to_string(&serde_json::json!({ "value": s }))
+                    .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                        format!("Failed to create signals JSON: {}", e)
+                    ))?
+            },
+            other => {
+                // Convert other types to JSON
+                let json_str = other.to_html_attr();
+                serde_json::to_string(&serde_json::json!({ "value": json_str }))
+                    .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                        format!("Failed to create signals JSON: {}", e)
+                    ))?
+            }
+        };
+        
+        Ok(("data-signals".to_string(), DatastarValue::Json(json_value)))
+    }
+    
+    #[inline]
+    fn priority(&self) -> u8 { 100 }
+}
+
+/// Handler for general ds_on_* event attributes
+pub struct EventHandler;
+
+impl DatastarHandler for EventHandler {
+    #[inline]
+    fn can_handle(&self, key: &str) -> bool {
+        key.starts_with("ds_on_")
+    }
+    
+    #[inline]
+    fn process(&self, key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
+        let event_part = &key[6..]; // Remove "ds_on_"
+        let data_key = transform_event_key(event_part);
+        let datastar_value = DatastarValue::from_python(value)?;
+        
+        // Events should typically be expressions, but we'll preserve the detected type
+        Ok((data_key, datastar_value))
+    }
+    
+    #[inline]
+    fn priority(&self) -> u8 { 80 }
+}
+
+/// Handler for specific high-priority event patterns
+pub struct SpecificEventHandler {
+    pub prefix: &'static str,
+    pub data_prefix: &'static str,
+}
+
+impl DatastarHandler for SpecificEventHandler {
+    #[inline]
+    fn can_handle(&self, key: &str) -> bool {
+        key.starts_with(self.prefix)
+    }
+    
+    #[inline]
+    fn process(&self, key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
+        let data_key = key.replace(self.prefix, self.data_prefix).replace('_', "-");
+        let datastar_value = DatastarValue::from_python(value)?;
+        Ok((data_key, datastar_value))
+    }
+    
+    #[inline]
+    fn priority(&self) -> u8 { 90 }
+}
+
+/// Handler for reactive class binding (ds_cls)
+pub struct ClassHandler;
+
+impl DatastarHandler for ClassHandler {
+    #[inline]
+    fn can_handle(&self, key: &str) -> bool {
+        key == "ds_cls"
+    }
+    
+    #[inline]
+    fn process(&self, _key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
+        let datastar_value = DatastarValue::from_python(value)?;
+        
+        // Class bindings should be JSON objects
+        let json_value = match datastar_value {
+            DatastarValue::Json(json) => json,
+            other => {
+                // Convert to JSON format
+                serde_json::to_string(&serde_json::json!({ "default": other.to_html_attr() }))
+                    .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                        format!("Failed to create class binding JSON: {}", e)
+                    ))?
+            }
+        };
+        
+        Ok(("data-class".to_string(), DatastarValue::Json(json_value)))
+    }
+    
+    #[inline]
+    fn priority(&self) -> u8 { 95 }
+}
+
+/// Default fallback handler for any ds_* attribute
+pub struct DefaultDatastarHandler;
+
+impl DatastarHandler for DefaultDatastarHandler {
+    #[inline]
+    fn can_handle(&self, key: &str) -> bool {
+        key.starts_with("ds_")
+    }
+    
+    #[inline]
+    fn process(&self, key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
+        let data_key = key.replace("ds_", "data-").replace('_', "-");
+        let datastar_value = DatastarValue::from_python(value)?;
+        Ok((data_key, datastar_value))
+    }
+    
+    #[inline]
+    fn priority(&self) -> u8 { 1 }
+}
+
+/// Event key transformation with intelligent pattern detection
+#[inline]
+fn transform_event_key(event_part: &str) -> String {
+    // Handle double underscore -> dot notation (ds_on_click__debounce_500ms)
+    if let Some(double_pos) = event_part.find("__") {
+        let base_event = &event_part[..double_pos];
+        let modifier_part = &event_part[double_pos + 2..];
+        
+        // Convert underscores to dots in modifier part
+        let modifier = modifier_part.replace('_', ".");
+        return format!("data-on-{}.{}", base_event.replace('_', "-"), modifier);
+    }
+    
+    // Handle timing modifiers (click_debounce_500ms -> click.debounce.500ms)
+    if event_part.contains("_") && event_part.ends_with("ms") {
+        let parts: Vec<&str> = event_part.split('_').collect();
+        if parts.len() >= 2 {
+            let base_event = parts[0];
+            let modifiers: Vec<&str> = parts[1..].iter().copied().collect();
+            let modifier_str = modifiers.join(".");
+            return format!("data-on-{}.{}", base_event, modifier_str);
+        }
+    }
+    
+    // Default transformation
+    format!("data-on-{}", event_part.replace('_', "-"))
+}
+
+/// Datastar processor with handler registry and caching
+pub struct DatastarProcessor {
+    handlers: Vec<Box<dyn DatastarHandler>>,
+}
+
+impl DatastarProcessor {
+    /// Create a new processor with all default handlers
+    pub fn new() -> Self {
+        let mut handlers: Vec<Box<dyn DatastarHandler>> = vec![
+            Box::new(SignalsHandler),
+            Box::new(ClassHandler),
+            Box::new(SpecificEventHandler { prefix: "ds_on_load", data_prefix: "data-on-load" }),
+            Box::new(SpecificEventHandler { prefix: "ds_on_scroll", data_prefix: "data-scroll" }),
+            Box::new(SpecificEventHandler { prefix: "ds_on_resize", data_prefix: "data-on-resize" }),
+            Box::new(EventHandler), // Generic event handler (lower priority)
+            Box::new(DefaultDatastarHandler), // Fallback handler (lowest priority)
+        ];
+        
+        // Sort by priority (highest first)
+        handlers.sort_by(|a, b| b.priority().cmp(&a.priority()));
+        
+        Self { handlers }
+    }
+    
+    /// Process a ds_* attribute through the handler system with caching
+    #[inline]
+    pub fn process(&self, key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
+        // Create a cache key that includes the actual value for better cache discrimination
+        let value_str = if let Ok(s) = value.extract::<String>() {
+            // For strings, include the actual string content in the cache key
+            format!("{}:str:{}", key, s)
+        } else {
+            // For other types, use type name and a simple identifier
+            format!("{}:{}:repr", key, value.get_type().name()?)
+        };
+        
+        if let Some(cached) = DATASTAR_ATTR_CACHE.with(|cache| {
+            cache.borrow().get(&value_str).cloned()
+        }) {
+            return Ok(cached);
+        }
+        
+        // Find appropriate handler
+        for handler in &self.handlers {
+            if handler.can_handle(key) {
+                let result = handler.process(key, value)?;
+                
+                // Cache the result
+                DATASTAR_ATTR_CACHE.with(|cache| {
+                    let mut cache_ref = cache.borrow_mut();
+                    if cache_ref.len() < 256 { // Prevent unbounded growth
+                        cache_ref.insert(value_str, result.clone());
+                    }
+                });
+                
+                return Ok(result);
+            }
+        }
+        
+        // Should never reach here due to DefaultDatastarHandler
+        Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            format!("No handler found for Datastar attribute: {}", key)
+        ))
+    }
+}
 
 // =============================================================================
 // MEMORY MANAGEMENT & OBJECT POOLING
@@ -405,6 +811,54 @@ fn build_attributes_optimized(attrs: &HashMap<String, String>) -> String {
     result
 }
 
+// Enhanced attribute building with Datastar support
+#[inline(always)]
+fn build_attributes_with_datastar(
+    attrs: &HashMap<String, String>,
+    datastar_attrs: &HashMap<String, DatastarValue>
+) -> String {
+    if attrs.is_empty() && datastar_attrs.is_empty() {
+        return String::new();
+    }
+    
+    // Pre-calculate exact capacity needed
+    let regular_capacity: usize = attrs.iter()
+        .map(|(k, v)| {
+            let mapped_key_len = attrmap_optimized(k).len();
+            mapped_key_len + v.len() + 4 // +4 for =" " and quote
+        })
+        .sum::<usize>();
+    
+    let datastar_capacity: usize = datastar_attrs.iter()
+        .map(|(k, v)| k.len() + v.memory_size() + 4) // +4 for =" " and quote
+        .sum::<usize>();
+    
+    let total_capacity = regular_capacity + datastar_capacity + 1; // +1 for leading space
+    let mut result = get_pooled_string(total_capacity);
+    result.push(' ');
+    
+    // Process regular attributes first
+    for (k, v) in attrs {
+        let mapped_key = attrmap_optimized(k);
+        result.push_str(&mapped_key);
+        result.push_str("=\"");
+        result.push_str(v);
+        result.push_str("\" ");
+    }
+    
+    // Process Datastar attributes
+    for (k, v) in datastar_attrs {
+        result.push_str(k);
+        result.push_str("=\"");
+        result.push_str(&v.to_html_attr());
+        result.push_str("\" ");
+    }
+    
+    // Remove trailing space
+    result.pop();
+    result
+}
+
 // Core HtmlString with optimized memory layout
 #[pyclass(module = "rusty_tags")]
 pub struct HtmlString {
@@ -417,6 +871,7 @@ pub struct HtmlString {
 pub struct TagBuilder {
     tag_name: String,
     pub attrs: HashMap<String, String>,
+    pub datastar_attrs: HashMap<String, DatastarValue>,
 }
 
 #[pymethods]
@@ -477,30 +932,52 @@ impl TagBuilder {
         TagBuilder {
             tag_name,
             attrs: HashMap::default(),
+            datastar_attrs: HashMap::default(),
         }
     }
     
     #[inline(always)]
     #[pyo3(signature = (*children, **kwargs))]
     fn __call__(&mut self, children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<HtmlString> {
-        // Merge new attributes with existing ones
+        // Merge new attributes with existing ones, processing Datastar attributes
         if let Some(kwargs) = kwargs {
+            let processor = DatastarProcessor::new();
+            
             for (key, value) in kwargs.iter() {
                 let key_str = key.extract::<String>()?;
-                let value_str = convert_attribute_value(&value, py)?;
-                self.attrs.insert(key_str, value_str);
+                
+                if key_str.starts_with("ds_") {
+                    // Process Datastar attribute
+                    let (data_key, data_value) = processor.process(&key_str, &value)?;
+                    self.datastar_attrs.insert(data_key, data_value);
+                } else if key_str == "cls" {
+                    // Handle special case of reactive vs static class
+                    if value.is_instance_of::<PyDict>() {
+                        // Reactive class binding -> ds_cls
+                        let (data_key, data_value) = processor.process("ds_cls", &value)?;
+                        self.datastar_attrs.insert(data_key, data_value);
+                    } else {
+                        // Regular HTML class
+                        let value_str = convert_attribute_value(&value, py)?;
+                        self.attrs.insert("class".to_string(), value_str);
+                    }
+                } else {
+                    // Regular HTML attribute
+                    let value_str = convert_attribute_value(&value, py)?;
+                    self.attrs.insert(key_str, value_str);
+                }
             }
         }
         
-        // Build the final HTML using existing optimized functions
-        build_html_tag_optimized(&self.tag_name, children, self.attrs.clone(), py)
+        // Build the final HTML using enhanced function
+        build_html_tag_with_datastar(&self.tag_name, children, &self.attrs, &self.datastar_attrs, py)
     }
     
     #[inline(always)]
     fn __str__(&self) -> PyResult<String> {
         // Return empty tag without children for inspection
         let tag_lower = normalize_tag_name(&self.tag_name);
-        let attr_string = build_attributes_optimized(&self.attrs);
+        let attr_string = build_attributes_with_datastar(&self.attrs, &self.datastar_attrs);
         
         let capacity = tag_lower.len() * 2 + attr_string.len() + 5;
         let mut result = get_pooled_string(capacity);
@@ -568,6 +1045,36 @@ fn build_html_tag_optimized(
     Ok(HtmlString::new(result))
 }
 
+// Enhanced HTML tag builder with Datastar support
+#[inline(always)]
+fn build_html_tag_with_datastar(
+    tag_name: &str,
+    children: Vec<PyObject>,
+    attrs: &HashMap<String, String>,
+    datastar_attrs: &HashMap<String, DatastarValue>,
+    py: Python
+) -> PyResult<HtmlString> {
+    let tag_lower = normalize_tag_name(tag_name);
+    let attr_string = build_attributes_with_datastar(attrs, datastar_attrs);
+    let children_string = process_children_optimized(&children, py)?;
+    
+    // Calculate exact capacity to avoid any reallocations
+    let capacity = tag_lower.len() * 2 + attr_string.len() + children_string.len() + 5;
+    let mut result = get_pooled_string(capacity);
+    
+    // Build HTML in a single pass with minimal function calls
+    result.push('<');
+    result.push_str(&tag_lower);
+    result.push_str(&attr_string);
+    result.push('>');
+    result.push_str(&children_string);
+    result.push_str("</");
+    result.push_str(&tag_lower);
+    result.push('>');
+    
+    Ok(HtmlString::new(result))
+}
+
 // Optimized macro with aggressive inlining and fast paths
 macro_rules! html_tag_optimized {
     ($name:ident, $doc:expr) => {
@@ -585,16 +1092,36 @@ macro_rules! html_tag_optimized {
             // If no children but has attributes, create self-closing tag immediately
             if children.is_empty() {
                 let mut attrs = HashMap::default();
+                let mut datastar_attrs = HashMap::default();
                 
                 if let Some(kwargs) = kwargs {
+                    let processor = DatastarProcessor::new();
+                    
                     for (key, value) in kwargs.iter() {
                         let key_str = key.extract::<String>()?;
-                        let value_str = convert_attribute_value(&value, py)?;
-                        attrs.insert(key_str, value_str);
+                        
+                        if key_str.starts_with("ds_") {
+                            // Process Datastar attribute
+                            let (data_key, data_value) = processor.process(&key_str, &value)?;
+                            datastar_attrs.insert(data_key, data_value);
+                        } else if key_str == "cls" {
+                            // Handle reactive vs static class
+                            if value.is_instance_of::<PyDict>() {
+                                let (data_key, data_value) = processor.process("ds_cls", &value)?;
+                                datastar_attrs.insert(data_key, data_value);
+                            } else {
+                                let value_str = convert_attribute_value(&value, py)?;
+                                attrs.insert("class".to_string(), value_str);
+                            }
+                        } else {
+                            // Regular HTML attribute
+                            let value_str = convert_attribute_value(&value, py)?;
+                            attrs.insert(key_str, value_str);
+                        }
                     }
                 }
                 
-                let html_string = build_html_tag_optimized(stringify!($name), children, attrs, py)?;
+                let html_string = build_html_tag_with_datastar(stringify!($name), children, &attrs, &datastar_attrs, py)?;
                 return Ok(Py::new(py, html_string)?.into());
             }
             
@@ -618,18 +1145,38 @@ macro_rules! html_tag_optimized {
                 return Ok(Py::new(py, html_string)?.into());
             }
             
-            // Full path with attributes - use optimized HashMap
+            // Full path with attributes - use optimized HashMap with Datastar support
             let mut attrs = HashMap::default();
+            let mut datastar_attrs = HashMap::default();
             
             if let Some(kwargs) = kwargs {
+                let processor = DatastarProcessor::new();
+                
                 for (key, value) in kwargs.iter() {
                     let key_str = key.extract::<String>()?;
-                    let value_str = convert_attribute_value(&value, py)?;
-                    attrs.insert(key_str, value_str);
+                    
+                    if key_str.starts_with("ds_") {
+                        // Process Datastar attribute
+                        let (data_key, data_value) = processor.process(&key_str, &value)?;
+                        datastar_attrs.insert(data_key, data_value);
+                    } else if key_str == "cls" {
+                        // Handle reactive vs static class
+                        if value.is_instance_of::<PyDict>() {
+                            let (data_key, data_value) = processor.process("ds_cls", &value)?;
+                            datastar_attrs.insert(data_key, data_value);
+                        } else {
+                            let value_str = convert_attribute_value(&value, py)?;
+                            attrs.insert("class".to_string(), value_str);
+                        }
+                    } else {
+                        // Regular HTML attribute
+                        let value_str = convert_attribute_value(&value, py)?;
+                        attrs.insert(key_str, value_str);
+                    }
                 }
             }
             
-            let html_string = build_html_tag_optimized(stringify!($name), children, attrs, py)?;
+            let html_string = build_html_tag_with_datastar(stringify!($name), children, &attrs, &datastar_attrs, py)?;
             Ok(Py::new(py, html_string)?.into())
         }
     };
