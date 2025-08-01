@@ -78,5 +78,10 @@ docs/_build/
 
 # Claude
 .claude/
+.cursor/
+.bmad-core/
 CLAUDE.md
 RustyMonsterUI/
+
+# notebooks
+*.ipynb

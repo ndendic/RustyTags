@@ -38,6 +38,9 @@ from .rusty_tags import (
     CustomTag,
 )
 
+# Import Datastar utilities
+from . import datastar
+
 __version__ = "0.2.3"
 __author__ = "Nikola Dendic"
 __description__ = "High-performance HTML generation library with Rust-based Python extension"
