@@ -5,7 +5,7 @@ Type stubs for RustyTags - High-performance HTML generation library
 from typing import Any, Union, overload
 
 # Type aliases for better type hints
-AttributeValue = Union[str, int, float, bool]
+AttributeValue = Union[str, int, float, bool, dict[str, str]]
 Child = Union[str, int, float, bool, "HtmlString", "TagBuilder", Any]
 
 class HtmlString:
