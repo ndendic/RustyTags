@@ -2,13 +2,14 @@
 
 ⚠️ **Early Beta** - This library is in active development and APIs may change.
 
-A high-performance HTML generation library that provides a Rust-based Python extension for building HTML/SVG tags. RustyTags offers significant speed improvements over pure Python HTML generation libraries through memory optimization and Rust-powered performance, now featuring FastHTML-style callable syntax for modern web development.
+A high-performance HTML generation library that provides a Rust-based Python extension for building HTML/SVG tags. RustyTags offers significant speed improvements over pure Python HTML generation libraries through memory optimization and Rust-powered performance, now featuring FastHTML-style callable syntax and comprehensive Datastar integration for modern reactive web development.
 
 ## What RustyTags Does
 
 RustyTags generates HTML and SVG content programmatically with:
 - **Speed**: Rust-powered performance with memory optimization and caching
 - **Modern Syntax**: FastHTML-style callable chaining with minimal performance overhead
+- **Datastar Integration**: Complete reactive web development with shorthand attributes
 - **Type Safety**: Smart type conversion for Python objects (booleans, numbers, strings)
 - **Framework Integration**: Supports `__html__`, `_repr_html_`, and `render()` methods
 - **Advanced Features**: Custom tags, attribute mapping, complete HTML5/SVG support
@@ -31,6 +32,7 @@ maturin build --release
 
 ```python
 from rusty_tags import Div, P, A, Html, Head, Body, Script, CustomTag, Svg, Circle, Text
+from rusty_tags.datastar import signals, reactive_class, DS
 
 # Simple HTML generation
 content = Div(
@@ -80,9 +82,27 @@ svg_graphic = Svg(
 )
 print(svg_graphic)
 # Output: <svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="blue"></circle><text x="10" y="30" fill="white">Hello SVG!</text></svg>
+
+# Datastar reactive components (NEW!)
+reactive_counter = Div(
+    P(text="$count", cls="counter-display"),
+    Button("+", on_click="$count++"),
+    Button("-", on_click="$count--"),
+    signals={"count": 0},
+    cls="counter-app"
+)
+print(reactive_counter)
+# Output: <div class="counter-app" data-signals='{"count":0}'><p class="counter-display" data-text="$count"></p><button data-on-click="$count++">+</button><button data-on-click="$count--">-</button></div>
 ```
 
 ## Features
+
+### Datastar Reactive Integration
+- **Shorthand Attributes**: Clean syntax with `signals`, `bind`, `show`, `text`, `on_click`, etc.
+- **Backward Compatible**: Full support for `ds_*` prefixed attributes
+- **Event Handling**: Comprehensive `on_*` event attribute support
+- **State Management**: Built-in signals, computed values, and effects
+- **Performance Optimized**: Zero overhead for Datastar attribute processing
 
 ### FastHTML-Style Callable API
 - **Chainable Syntax**: Support for `Div(cls="container")(children...)` patterns
@@ -121,6 +141,20 @@ content = Div(P("Text", _class="highlight"), cls="container")
 # FastHTML-style callable chaining
 content = Div(cls="container")(P("Text", _class="highlight"))
 
+# Datastar reactive components
+from rusty_tags.datastar import signals, reactive_class, DS
+
+# Interactive todo item with Datastar
+todo_item = Div(
+    Input(type="checkbox", bind="$todo.completed"),
+    Span(
+        text="$todo.text",
+        cls=reactive_class(completed="$todo.completed")
+    ),
+    Button("Delete", on_click=DS.delete("/todos/123")),
+    signals={"todo": {"text": "Learn RustyTags", "completed": False}}
+)
+
 # Mixed approach for complex layouts
 page = Div(id="app")(
     Header(cls="top-nav")(
@@ -130,6 +164,71 @@ page = Div(id="app")(
         H1("Welcome"),
         P("Content here")
     )
+)
+```
+
+## Datastar Integration
+
+RustyTags provides comprehensive Datastar support for building reactive web applications:
+
+### Shorthand Attributes
+
+All Datastar attributes support clean shorthand syntax:
+
+```python
+# Before (still supported)
+Div(ds_signals={"count": 0}, ds_show="$visible", ds_on_click="$increment()")
+
+# After (new shorthand)
+Div(signals={"count": 0}, show="$visible", on_click="$increment()")
+```
+
+### Supported Datastar Attributes
+
+**Core Attributes:**
+- `signals` → `data-signals` - Component state management
+- `bind` → `data-bind` - Two-way data binding
+- `show` → `data-show` - Conditional visibility
+- `text` → `data-text` - Dynamic text content
+- `attrs` → `data-attrs` - Dynamic attributes
+- `style` → `data-style` - Dynamic styling
+
+**Event Attributes:**
+- `on_click`, `on_hover`, `on_submit`, `on_focus`, `on_blur`
+- `on_keydown`, `on_change`, `on_input`, `on_load`
+- `on_intersect`, `on_interval`, `on_raf`, `on_resize`
+
+**Advanced Attributes:**
+- `effect` → `data-effect` - Side effects
+- `computed` → `data-computed` - Computed values
+- `ref` → `data-ref` - Element references
+- `indicator` → `data-indicator` - Loading states
+- `persist` → `data-persist` - State persistence
+- `ignore` → `data-ignore` - Skip processing
+
+### Complete Example
+
+```python
+from rusty_tags import Div, Button, Input, Span
+from rusty_tags.datastar import signals, reactive_class, DS
+
+# Interactive counter with Datastar
+counter_app = Div(
+    Span(text="$count", cls="display"),
+    Div(
+        Button("-", on_click="$count--"),
+        Button("+", on_click="$count++"),
+        Button("Reset", on_click=DS.set("count", 0)),
+        cls="controls"
+    ),
+    Input(
+        type="range",
+        bind="$count",
+        attrs={"min": "0", "max": "100"}
+    ),
+    signals={"count": 50},
+    effect="console.log('Count changed:', $count)",
+    cls="counter-app"
 )
 ```
 
@@ -148,6 +247,8 @@ RustyTags significantly outperforms pure Python HTML generation:
 - ✅ All HTML5 tags implemented
 - ✅ Complete SVG tag support
 - ✅ FastHTML-style callable API
+- ✅ Complete Datastar integration with shorthand attributes
+- ✅ Reactive state management and event handling
 - ✅ Smart type conversion and attribute mapping
 - ✅ Memory optimization and caching
 - ✅ Custom tag support

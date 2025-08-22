@@ -69,7 +69,7 @@ docs/_build/
 .vscode/
 
 # Tests
-.tests/
+tests/
 
 # Pyenv
 .python-version

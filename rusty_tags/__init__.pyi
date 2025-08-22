@@ -601,6 +601,9 @@ def OptionEl(*children: Child, **kwargs: AttributeValue) -> Union[TagBuilder, Ht
     """Defines a select option"""
     ...
 
+# Alias for proper HTML tag name
+Option = OptionEl
+
 @overload
 def P(**kwargs: AttributeValue) -> TagBuilder: ...
 @overload  

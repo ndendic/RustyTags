@@ -41,10 +41,12 @@ from .rusty_tags import (  # noqa: E402
     CustomTag,
 )
 
+# Create alias for proper HTML tag name  
+Option = OptionEl
+
 # Import Datastar utilities
 from . import datastar
 
-__version__ = "0.2.3"
 __author__ = "Nikola Dendic"
 __description__ = "High-performance HTML generation library with Rust-based Python extension"
 
@@ -74,7 +76,7 @@ __all__ = [
     "Abbr", "Area", "Audio", "Base", "Bdi", "Bdo", "Blockquote", "Canvas", "Cite",
     "Data", "Datalist", "Dd", "Del", "Dfn", "Dialog", "Dl", "Dt", "Embed", "Fieldset",
     "Hgroup", "Ins", "Kbd", "Legend", "Map", "Mark", "Menu", "Meter", "Noscript",
-    "Object", "Optgroup", "OptionEl", "Picture", "Pre", "Progress", "Q", "Rp", "Rt",
+    "Object", "Optgroup", "OptionEl", "Option", "Picture", "Pre", "Progress", "Q", "Rp", "Rt",
     "Ruby", "S", "Samp", "Small", "Source", "Style", "Sub", "Sup", "Template", "Time",
     "Track", "U", "Var", "Video", "Wbr",
     

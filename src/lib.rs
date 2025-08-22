@@ -881,6 +881,11 @@ fn attrmap_optimized(attr: &str) -> String {
 // Cached tag name normalization
 #[inline(always)]
 fn normalize_tag_name(tag_name: &str) -> String {
+    // Special case for OptionEl -> option
+    if tag_name == "OptionEl" {
+        return "option".to_string();
+    }
+    
     // Fast path for already normalized strings
     if tag_name.len() <= 16 && tag_name.chars().all(|c| c.is_ascii_lowercase()) {
         return intern_string(tag_name).to_string();
