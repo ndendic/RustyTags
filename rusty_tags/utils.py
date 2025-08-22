@@ -45,3 +45,11 @@ def page_template(page_title: str = "MyPage", hdrs:Optional[tuple]=None,ftrs:Opt
     """
     template = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw)
     return template
+
+
+def show(html: HtmlString):
+    try:
+        from IPython.display import HTML
+        return HTML(html.render())
+    except ImportError:
+        raise ImportError("IPython is not installed. Please install IPython to use this function.")
