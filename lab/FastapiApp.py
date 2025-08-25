@@ -32,7 +32,8 @@ def Section(title, *content):
         cls="my-4 max-w-md"
     )
 
-@page(title="FastAPI App")
+@app.get("/")
+@page(title="FastAPI App", wrap_in=HTMLResponse)
 def index():
     partial = Main(
         H1("Hello, world!", cls="uk-h3 mb-2"),
@@ -53,30 +54,36 @@ def index():
     return partial
 
 
-@app.get("/")
-def read_root():
-    return HTMLResponse(index())
-
 events_signal = blinker_signal("events")
 results_queue = asyncio.Queue()
+
+def wrapper(func):
+    async def inner(*args, **kwargs):
+        func(*args, **kwargs)
+    return inner
 
 @app.get("/queries/{sender}")
 @datastar_response
 async def queries(sender: str, signals: ReadSignals):
     """Trigger events and return their results immediately"""
-    events_results = events_signal.send(sender, signals=signals)
+    events_results = await events_signal.send_async(sender, signals=signals, _sync_wrapper=wrapper)
     await results_queue.put(events_results)
 
 
 @event("events", sender="user")
-def on_event(sender, signals: dict | None):
+async def on_event(sender, signals: dict | None):
     message = (signals or {}).get("message", "No message provided")
-    return SSE.execute_script(f"UIkit.notification({{message: '{message}'}})")
+    yield SSE.execute_script(f"UIkit.notification({{message: '{message}'}})")
 
 @event("events", sender="user")
-def on_event_2(sender, signals: dict | None):
+async def on_event_2(sender, signals: dict | None):
     message = (signals or {}).get("message", "No message provided")
-    return SSE.patch_elements(Div(f"Server processed message: {message}",id="updates", cls="text-lg text-bold mt-4 mt-2"))
+    yield SSE.patch_elements(Div(f"Server processed message: {message}",id="updates", cls="text-lg text-bold mt-4 mt-2"))
+
+@event("events", sender="user")
+async def on_event_3(sender, signals: dict | None):
+    return SSE.patch_signals({"message": ""})
+
 
 @app.get("/updates")
 @datastar_response
@@ -86,16 +93,12 @@ async def event_stream(signals: ReadSignals):
         try:
             while True:
                 try:
-                    # Check for queued events
                     events = results_queue.get_nowait()
                     for _, event in events:
                         if event is not None:
                             yield event
                 except asyncio.QueueEmpty:
-                    # No events, wait a bit
                     await asyncio.sleep(0.1)
-                    # Send keep-alive ping
-                    yield SSE.patch_signals({"_sse_ping": "ok"})
         except Exception as e:
             print(f"SSE stream error: {e}")
 

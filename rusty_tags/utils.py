@@ -29,11 +29,14 @@ def create_page_decorator(page_title: str = "MyPage", hdrs:Optional[tuple]=None,
     The decorator will take the function's output and wrap it in the Page layout.
     """
     page_func = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw)
-    def page(title: str|None = None):
+    def page(title: str|None = None, wrap_in: Callable|None = None):
         def decorator(func: Callable[P, R]) -> Callable[P, R]:
             @wraps(func) 
             def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-                return page_func(func(*args, **kwargs), title=title if title else page_title)
+                if wrap_in:
+                    return wrap_in(page_func(func(*args, **kwargs), title=title if title else page_title))
+                else:
+                    return page_func(func(*args, **kwargs), title=title if title else page_title)
             return wrapper
         return decorator
     return page
