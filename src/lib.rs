@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::{PyBytes, PyDict, PyList};
 use ahash::AHashMap as HashMap;
 use smallvec::{SmallVec, smallvec};
 use dashmap::DashMap;
@@ -1055,6 +1055,27 @@ impl HtmlString {
         &self.content
     }
 
+    #[pyo3(signature = (encoding = "utf-8", errors = None))]
+    #[inline(always)]
+    fn encode(&self, encoding: &str, errors: Option<&str>, py: Python) -> PyResult<Py<PyBytes>> {
+        // Fast path for UTF-8 which is the default for Starlette/HTMLResponse
+        let enc_lower = encoding.to_ascii_lowercase();
+        if enc_lower == "utf-8" || enc_lower == "utf8" {
+            return Ok(PyBytes::new(py, self.content.as_bytes()).unbind());
+        }
+
+        // Fallback: use Python's codecs.encode to respect requested encoding and error handling
+        let codecs = py.import("codecs")?;
+        let args = (self.content.as_str(), encoding, errors.unwrap_or("strict"));
+        let res = codecs.call_method1("encode", args)?;
+        // codecs.encode returns a 'bytes' object; return it directly
+        Ok(res.extract::<Py<PyBytes>>()?)
+    }
+
+    #[inline(always)]
+    fn __bytes__(&self, py: Python) -> Py<PyBytes> {
+        PyBytes::new(py, self.content.as_bytes()).unbind()
+    }
     
     // Pickle support using __getnewargs_ex__
     #[inline(always)]

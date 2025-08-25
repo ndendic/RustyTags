@@ -1,11 +1,11 @@
-from .rusty_tags import HtmlString as RustyHtmlString
+from .datastar import *
+from .rusty_tags import HtmlString
+from .utils import Page, create_page_decorator, page_template, show
 """
 RustyTags - High-performance HTML generation library
 
 A Rust-based Python extension for building HTML/SVG tags with optimized performance.
 """
-HtmlString = RustyHtmlString
-HtmlString.__ft__ = lambda self: self
 
 from .rusty_tags import (  # noqa: E402
     # Core classes
@@ -45,7 +45,6 @@ from .rusty_tags import (  # noqa: E402
 Option = OptionEl
 
 # Import Datastar utilities
-from . import datastar
 
 __author__ = "Nikola Dendic"
 __description__ = "High-performance HTML generation library with Rust-based Python extension"
@@ -82,4 +81,9 @@ __all__ = [
     
     # Custom tag function
     "CustomTag",
+
+    # Utilities
+    "Page", "create_page_decorator", "page_template", "show",
+    # Datastar utilities
+    "signals", "reactive_class", "attribute_generator","DS",
 ]

@@ -1,6 +1,9 @@
-from typing import Optional
-from functools import partial
-from rusty_tags import *
+from typing import Optional, Callable, ParamSpec, TypeVar
+from functools import partial, wraps
+from .rusty_tags import Html, Head, Title, Body, HtmlString
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 def Page(*content, title: str = "StarModel", hdrs:Optional[tuple]=None,ftrs:Optional[tuple]=None, htmlkw:Optional[dict]=None, bodykw:Optional[dict]=None) -> HtmlString:
@@ -26,15 +29,13 @@ def create_page_decorator(page_title: str = "MyPage", hdrs:Optional[tuple]=None,
     The decorator will take the function's output and wrap it in the Page layout.
     """
     page_func = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw)
-    def page(fn=None, *,title: str|None = None):
-        def decorator(func):
-            def wrapper(*args, **kwargs):
+    def page(title: str|None = None):
+        def decorator(func: Callable[P, R]) -> Callable[P, R]:
+            @wraps(func) 
+            def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                 return page_func(func(*args, **kwargs), title=title if title else page_title)
             return wrapper
-        if fn is None:
-            return decorator
-        else:
-            return decorator(fn)
+        return decorator
     return page
 
 def page_template(page_title: str = "MyPage", hdrs:Optional[tuple]=None,ftrs:Optional[tuple]=None, htmlkw:Optional[dict]=None, bodykw:Optional[dict]=None):
@@ -43,7 +44,7 @@ def page_template(page_title: str = "MyPage", hdrs:Optional[tuple]=None,ftrs:Opt
     Returns a decorator function that can be used to wrap view functions.
     The decorator will take the function's output and wrap it in the Page layout.
     """
-    template = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw)
+    template = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw, title=page_title)
     return template
 
 

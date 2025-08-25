@@ -8,7 +8,7 @@ in a pythonic way, similar to the official Datastar Python SDK.
 import json
 from typing import Any, Dict, Union
 from urllib.parse import urlencode
-
+from datastar_py.attributes import attribute_generator
 
 class DS:
     """
@@ -20,7 +20,7 @@ class DS:
     """
     
     @staticmethod
-    def get(url: str, target: str|None = None, **params) -> str:
+    def get(url: str, **params) -> str:
         """
         Generate a @get() action for fetching data.
         
@@ -40,8 +40,6 @@ class DS:
             url = f"{url}?{urlencode(params)}"
         
         action = f"@get('{url}')"
-        if target:
-            action += f" @target('{target}')"
         
         return action
     
@@ -355,5 +353,6 @@ def reactive_class(**conditions) -> Dict[str, str]:
 __all__ = [
     'DS',
     'signals', 
-    'reactive_class'
+    'reactive_class',
+    'attribute_generator'
 ]
