@@ -56,7 +56,7 @@ async def _aiter_results(handler, *args, **kwargs):
     # plain sync value
     yield rv
 
-async def send_stream(sig, sender, out_q: asyncio.Queue, *args, **kwargs):
+async def blinker_send_stream(sig, sender, out_q: asyncio.Queue, *args, **kwargs):
     """
     Iterate all receivers for `sender`, stream their yielded/returned items
     into `out_q` as soon as they're produced.
@@ -79,6 +79,25 @@ async def send_stream(sig, sender, out_q: asyncio.Queue, *args, **kwargs):
         # optional: mark end of this dispatch burst
         await out_q.put(SENTINEL)
 
+def send_stream(backend_signal, sender, queue: asyncio.Queue, *args, **kwargs):
+    """
+    Iterate all receivers for `sender`, stream their yielded/returned items
+    into `out_q` as soon as they're produced.
+    """
+    asyncio.create_task(blinker_send_stream(backend_signal, sender, queue, *args, **kwargs))
+
+async def process_queue(queue: asyncio.Queue, delay: float = 0.1):
+    try:
+        while True:
+            try:
+                event = await queue.get()
+                if event is None or event is SENTINEL or isinstance(event, Exception):
+                    continue
+                yield event                    
+            except asyncio.QueueEmpty:
+                await asyncio.sleep(delay)
+    except Exception as e:
+        print(f"SSE stream error: {e}")
 
 F = TypeVar("F", bound=c.Callable[..., Any])
 

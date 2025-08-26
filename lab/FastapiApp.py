@@ -1,11 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from rusty_tags import *
 from rusty_tags.datastar import DS, signals
 from rusty_tags.utils import create_page_decorator, page_template
-from rusty_tags.blinker import event, send_stream, SENTINEL
+from rusty_tags.blinker import event, send_stream, process_queue
 from datastar_py.fastapi import datastar_response, ReadSignals, ServerSentEventGenerator as SSE
-from blinker import signal as blinker_signal
+from blinker import signal as backend_signal
 import asyncio
 
 hdrs = (
@@ -35,72 +35,45 @@ def Section(title, *content):
 @app.get("/")
 @page(title="FastAPI App", wrap_in=HTMLResponse)
 def index():
-    partial = Main(
+    return Main(
         H1("Hello, world!", cls="uk-h3 mb-2"),
         Span("Welcome to RustyTags! 🙂"),
-        Section("Counter", P("Count: ", Span(text="$count"), cls="text-lg"),
-            Button("Count++", on_click=DS.increment("count"), cls="uk-btn uk-btn-default"),
-            Button("Count--", on_click=DS.decrement("count"), cls="uk-btn uk-btn-default"),
-        ),
         Section("Updates", 
             Button("Get some updates", on_click=DS.get("/queries/user"), cls="uk-btn uk-btn-default"),    
             Input(type="text", id="message",bind="message", cls="uk-input"),
             Div(id="updates")
         ),
     
-        signals=signals(count=0, message=""),
+        signals=signals(message=""),
         on_load=DS.get("/updates")
     )
-    return partial
 
-
-events_signal = blinker_signal("events")
+events_signal = backend_signal("events")
 results_queue = asyncio.Queue()
 
-def wrapper(func):
-    async def inner(*args, **kwargs):
-        func(*args, **kwargs)
-    return inner
-
 @app.get("/queries/{sender}")
-@datastar_response
-async def queries(sender: str, signals: ReadSignals):
+async def queries(sender: str, request: Request, signals: ReadSignals):
     """Trigger events and return their results immediately"""
-    asyncio.create_task(send_stream(events_signal, sender, results_queue, signals=signals))
+    send_stream(events_signal, sender, results_queue, signals=signals, request=request)
     
 @app.get("/updates")
 @datastar_response
-async def event_stream(signals: ReadSignals):
+async def event_stream(request: Request, signals: ReadSignals):
     """SSE endpoint that processes queued events"""
-    async def gen():
-        try:
-            while True:
-                try:
-                    event = await results_queue.get()
-                    if event is None or event is SENTINEL or isinstance(event, Exception):
-                        continue
-                    yield event                    
-                except asyncio.QueueEmpty:
-                    await asyncio.sleep(0.1)
-        except Exception as e:
-            print(f"SSE stream error: {e}")
-
-    return gen()
+    return process_queue(results_queue)
 
 
 @event("events", sender="user")
-def on_event(sender, signals: dict | None):
+def on_event(sender, request: Request, signals: dict | None):
     message = (signals or {}).get("message", "No message provided")
-    return SSE.execute_script(f"UIkit.notification({{message: '{message}'}})")
-
-@event("events", sender="user")
-async def on_event_2(sender, signals: dict | None):
-    message = (signals or {}).get("message", "No message provided")
+    yield SSE.execute_script(f"UIkit.notification({{message: '{message}'}})")
     yield SSE.patch_elements(Div(f"Server processed message: {message}",id="updates", cls="text-lg text-bold mt-4 mt-2"))
+    yield SSE.patch_signals({"message": ""})
 
 @event("events", sender="user")
-async def on_event_3(sender, signals: dict | None):
-    return SSE.patch_signals({"message": ""})
+async def log_event(sender, request: Request, signals: dict | None):
+    message = (signals or {}).get("message", "No message provided")
+    return print(f"Logging event: {message}")
 
 
 
