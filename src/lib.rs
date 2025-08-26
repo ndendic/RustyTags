@@ -406,8 +406,7 @@ fn map_shorthand_attribute(key: &str) -> Option<String> {
     }
 }
 
-/// Process a single attribute key-value pair, handling shorthand attributes
-/// Returns (is_datastar_attr, processed_key, should_use_datastar_attrs)
+/// Process a single attribute key-value pair, handling shorthand attributes and Mapping expansion
 #[inline]
 fn process_attribute_key_value(
     key_str: &str,
@@ -417,6 +416,36 @@ fn process_attribute_key_value(
     datastar_attrs: &mut HashMap<String, DatastarValue>,
     py: Python,
 ) -> PyResult<()> {
+    // First check if the value is a Mapping and should be expanded
+    // Check if it's a PyDict specifically, as that's the most common case
+    if value.is_instance_of::<PyDict>() && !key_str.starts_with("ds_") && key_str != "cls" {
+        let dict = value.downcast::<PyDict>()?;
+        // Expand the mapping as individual attributes
+        for (map_key, map_value) in dict.iter() {
+            let map_key_str = map_key.extract::<String>()?;
+            // Recursively process each key-value pair from the mapping
+            process_attribute_key_value(&map_key_str, &map_value, processor, attrs, datastar_attrs, py)?;
+        }
+        return Ok(());
+    }
+    // For other mapping-like objects, try to check for items() method
+    else if !key_str.starts_with("ds_") && key_str != "cls" {
+        if let Ok(items) = value.call_method0("items") {
+            if let Ok(items_list) = items.downcast::<PyList>() {
+                for item in items_list.iter() {
+                    // Extract key-value pair from tuple
+                    if let Ok(tuple) = item.extract::<(String, PyObject)>() {
+                        let (map_key_str, map_value) = tuple;
+                        let map_value_bound = map_value.bind(py);
+                        process_attribute_key_value(&map_key_str, map_value_bound, processor, attrs, datastar_attrs, py)?;
+                    }
+                }
+                return Ok(());
+            }
+        }
+    }
+    
+    // Original attribute processing logic
     // Check if it's a shorthand attribute first
     if let Some(mapped_key) = map_shorthand_attribute(key_str) {
         // It's a shorthand attribute - process as Datastar
@@ -1108,18 +1137,36 @@ impl TagBuilder {
     #[inline(always)]
     #[pyo3(signature = (*children, **kwargs))]
     fn __call__(&mut self, children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<HtmlString> {
-        // Merge new attributes with existing ones, processing Datastar attributes
+        // Separate dict children from regular children and merge them into kwargs
+        let mut filtered_children = Vec::new();
+        let processor = DatastarProcessor::new();
+        
+        // Process existing kwargs first
         if let Some(kwargs) = kwargs {
-            let processor = DatastarProcessor::new();
-            
             for (key, value) in kwargs.iter() {
                 let key_str = key.extract::<String>()?;
                 process_attribute_key_value(&key_str, &value, &processor, &mut self.attrs, &mut self.datastar_attrs, py)?;
             }
         }
         
+        // Process children, extracting dicts as attributes
+        for child in children {
+            let child_bound = child.bind(py);
+            if child_bound.is_instance_of::<PyDict>() {
+                // This child is a dict - expand it as kwargs
+                let dict = child_bound.downcast::<PyDict>()?;
+                for (key, value) in dict.iter() {
+                    let key_str = key.extract::<String>()?;
+                    process_attribute_key_value(&key_str, &value, &processor, &mut self.attrs, &mut self.datastar_attrs, py)?;
+                }
+            } else {
+                // Regular child content
+                filtered_children.push(child);
+            }
+        }
+        
         // Build the final HTML using enhanced function
-        build_html_tag_with_datastar(&self.tag_name, children, &self.attrs, &self.datastar_attrs, py)
+        build_html_tag_with_datastar(&self.tag_name, filtered_children, &self.attrs, &self.datastar_attrs, py)
     }
     
     #[inline(always)]
@@ -1232,33 +1279,51 @@ macro_rules! html_tag_optimized {
         #[pyo3(signature = (*children, **kwargs))]
         #[inline(always)]
         fn $name(children: Vec<PyObject>, kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<PyObject> {
+            // Separate dict children from regular children and process all attributes properly
+            let mut filtered_children = Vec::new();
+            let mut attrs = HashMap::default();
+            let mut datastar_attrs = HashMap::default();
+            let processor = DatastarProcessor::new();
+            
+            // Process existing kwargs first
+            if let Some(kwargs) = kwargs {
+                for (key, value) in kwargs.iter() {
+                    let key_str = key.extract::<String>()?;
+                    process_attribute_key_value(&key_str, &value, &processor, &mut attrs, &mut datastar_attrs, py)?;
+                }
+            }
+            
+            // Process children, extracting dicts as attributes
+            for child in children {
+                let child_bound = child.bind(py);
+                if child_bound.is_instance_of::<PyDict>() {
+                    // This child is a dict - expand it as kwargs
+                    let dict = child_bound.downcast::<PyDict>()?;
+                    for (key, value) in dict.iter() {
+                        let key_str = key.extract::<String>()?;
+                        process_attribute_key_value(&key_str, &value, &processor, &mut attrs, &mut datastar_attrs, py)?;
+                    }
+                } else {
+                    // Regular child content
+                    filtered_children.push(child);
+                }
+            }
+            
             // If no children AND no attributes, return TagBuilder for chaining
-            if children.is_empty() && kwargs.is_none() {
+            if filtered_children.is_empty() && attrs.is_empty() && datastar_attrs.is_empty() {
                 let tag_builder = TagBuilder::new(stringify!($name).to_string());
                 return Ok(Py::new(py, tag_builder)?.into());
             }
             
             // If no children but has attributes, create self-closing tag immediately
-            if children.is_empty() {
-                let mut attrs = HashMap::default();
-                let mut datastar_attrs = HashMap::default();
-                
-                if let Some(kwargs) = kwargs {
-                    let processor = DatastarProcessor::new();
-                    
-                    for (key, value) in kwargs.iter() {
-                        let key_str = key.extract::<String>()?;
-                        process_attribute_key_value(&key_str, &value, &processor, &mut attrs, &mut datastar_attrs, py)?;
-                    }
-                }
-                
-                let html_string = build_html_tag_with_datastar(stringify!($name), children, &attrs, &datastar_attrs, py)?;
+            if filtered_children.is_empty() {
+                let html_string = build_html_tag_with_datastar(stringify!($name), filtered_children, &attrs, &datastar_attrs, py)?;
                 return Ok(Py::new(py, html_string)?.into());
             }
             
             // Fast path for no attributes but with children
-            if kwargs.is_none() {
-                let children_string = process_children_optimized(&children, py)?;
+            if attrs.is_empty() && datastar_attrs.is_empty() {
+                let children_string = process_children_optimized(&filtered_children, py)?;
                 let tag_name = normalize_tag_name(stringify!($name));
                 
                 let capacity = tag_name.len() * 2 + children_string.len() + 5;
@@ -1276,20 +1341,8 @@ macro_rules! html_tag_optimized {
                 return Ok(Py::new(py, html_string)?.into());
             }
             
-            // Full path with attributes - use optimized HashMap with Datastar support
-            let mut attrs = HashMap::default();
-            let mut datastar_attrs = HashMap::default();
-            
-            if let Some(kwargs) = kwargs {
-                let processor = DatastarProcessor::new();
-                
-                for (key, value) in kwargs.iter() {
-                    let key_str = key.extract::<String>()?;
-                    process_attribute_key_value(&key_str, &value, &processor, &mut attrs, &mut datastar_attrs, py)?;
-                }
-            }
-            
-            let html_string = build_html_tag_with_datastar(stringify!($name), children, &attrs, &datastar_attrs, py)?;
+            // Full path with attributes
+            let html_string = build_html_tag_with_datastar(stringify!($name), filtered_children, &attrs, &datastar_attrs, py)?;
             Ok(Py::new(py, html_string)?.into())
         }
     };

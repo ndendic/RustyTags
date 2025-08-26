@@ -9,6 +9,7 @@ import json
 from typing import Any, Dict, Union
 from urllib.parse import urlencode
 from datastar_py.attributes import attribute_generator
+from datastar_py import ServerSentEventGenerator as SSE
 
 class DS:
     """
@@ -354,5 +355,6 @@ __all__ = [
     'DS',
     'signals', 
     'reactive_class',
-    'attribute_generator'
+    'attribute_generator',
+    'SSE'
 ]

@@ -1,18 +1,26 @@
 from typing import Optional, Callable, ParamSpec, TypeVar
 from functools import partial, wraps
-from .rusty_tags import Html, Head, Title, Body, HtmlString
+from .rusty_tags import Html, Head, Title, Body, HtmlString, Script, CustomTag
 
 P = ParamSpec("P")
 R = TypeVar("R")
 
+fragment = CustomTag("Fragment")
 
-def Page(*content, title: str = "StarModel", hdrs:Optional[tuple]=None,ftrs:Optional[tuple]=None, htmlkw:Optional[dict]=None, bodykw:Optional[dict]=None) -> HtmlString:
+def Page(*content, 
+         title: str = "StarModel", 
+         hdrs:Optional[tuple]=None,
+         ftrs:Optional[tuple]=None, 
+         htmlkw:Optional[dict]=None, 
+         bodykw:Optional[dict]=None,
+         datastar:bool=True) -> HtmlString:
     """Base page layout with common HTML structure."""
     
     return Html(
         Head(
             Title(title),
             *hdrs if hdrs else (),
+            Script(src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js", type="module") if datastar else fragment,
         ),
         Body(
             *content,                
@@ -22,13 +30,18 @@ def Page(*content, title: str = "StarModel", hdrs:Optional[tuple]=None,ftrs:Opti
         **htmlkw if htmlkw else {},
     )
 
-def create_page_decorator(page_title: str = "MyPage", hdrs:Optional[tuple]=None,ftrs:Optional[tuple]=None, htmlkw:Optional[dict]=None, bodykw:Optional[dict]=None):
+def create_template(page_title: str = "MyPage", 
+                    hdrs:Optional[tuple]=None,
+                    ftrs:Optional[tuple]=None, 
+                    htmlkw:Optional[dict]=None, 
+                    bodykw:Optional[dict]=None,
+                    datastar:bool=True):
     """Create a decorator that wraps content in a Page layout.
     
     Returns a decorator function that can be used to wrap view functions.
     The decorator will take the function's output and wrap it in the Page layout.
     """
-    page_func = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw)
+    page_func = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw, datastar=datastar)
     def page(title: str|None = None, wrap_in: Callable|None = None):
         def decorator(func: Callable[P, R]) -> Callable[P, R]:
             @wraps(func) 

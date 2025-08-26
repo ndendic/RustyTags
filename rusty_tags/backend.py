@@ -4,7 +4,7 @@ import inspect
 import threading
 from typing import Any, TypeVar
 
-from blinker import ANY, signal
+from blinker import ANY, signal as event, Signal
 
 SENTINEL = object()
 
@@ -101,8 +101,11 @@ async def process_queue(queue: asyncio.Queue, delay: float = 0.1):
 
 F = TypeVar("F", bound=c.Callable[..., Any])
 
-def event(signal_name: str, sender: Any = ANY, weak: bool = True) -> c.Callable[[F], F]:
-    sig = signal(signal_name)
+def on_event(signal_name: str|Signal, sender: Any = ANY, weak: bool = True) -> c.Callable[[F], F]:
+    if isinstance(signal_name, Signal):
+        sig = signal_name
+    else:
+        sig = event(signal_name)
     def decorator(fn):
         sig.connect(fn, sender, weak)
         return fn
