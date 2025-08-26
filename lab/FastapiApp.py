@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from rusty_tags import *
 from rusty_tags.datastar import DS, signals
 from rusty_tags.utils import create_page_decorator, page_template
-from rusty_tags.blinker import event
+from rusty_tags.blinker import event, send_stream, SENTINEL
 from datastar_py.fastapi import datastar_response, ReadSignals, ServerSentEventGenerator as SSE
 from blinker import signal as blinker_signal
 import asyncio
@@ -66,14 +66,32 @@ def wrapper(func):
 @datastar_response
 async def queries(sender: str, signals: ReadSignals):
     """Trigger events and return their results immediately"""
-    events_results = await events_signal.send_async(sender, signals=signals, _sync_wrapper=wrapper)
-    await results_queue.put(events_results)
+    asyncio.create_task(send_stream(events_signal, sender, results_queue, signals=signals))
+    
+@app.get("/updates")
+@datastar_response
+async def event_stream(signals: ReadSignals):
+    """SSE endpoint that processes queued events"""
+    async def gen():
+        try:
+            while True:
+                try:
+                    event = await results_queue.get()
+                    if event is None or event is SENTINEL or isinstance(event, Exception):
+                        continue
+                    yield event                    
+                except asyncio.QueueEmpty:
+                    await asyncio.sleep(0.1)
+        except Exception as e:
+            print(f"SSE stream error: {e}")
+
+    return gen()
 
 
 @event("events", sender="user")
-async def on_event(sender, signals: dict | None):
+def on_event(sender, signals: dict | None):
     message = (signals or {}).get("message", "No message provided")
-    yield SSE.execute_script(f"UIkit.notification({{message: '{message}'}})")
+    return SSE.execute_script(f"UIkit.notification({{message: '{message}'}})")
 
 @event("events", sender="user")
 async def on_event_2(sender, signals: dict | None):
@@ -85,22 +103,5 @@ async def on_event_3(sender, signals: dict | None):
     return SSE.patch_signals({"message": ""})
 
 
-@app.get("/updates")
-@datastar_response
-async def event_stream(signals: ReadSignals):
-    """SSE endpoint that processes queued events"""
-    async def gen():
-        try:
-            while True:
-                try:
-                    events = results_queue.get_nowait()
-                    for _, event in events:
-                        if event is not None:
-                            yield event
-                except asyncio.QueueEmpty:
-                    await asyncio.sleep(0.1)
-        except Exception as e:
-            print(f"SSE stream error: {e}")
 
-    return gen()
-    
+
