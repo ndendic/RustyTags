@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from rusty_tags import *
-from rusty_tags.datastar import DS, signals
+from rusty_tags.datastar import DS, signals, attribute_generator as data
 from rusty_tags.utils import create_page_decorator, page_template
 from rusty_tags.blinker import event, send_stream, process_queue
 from datastar_py.fastapi import datastar_response, ReadSignals, ServerSentEventGenerator as SSE
+from datastar_py.consts import ElementPatchMode
 from blinker import signal as backend_signal
 import asyncio
 
@@ -13,7 +14,8 @@ hdrs = (
     Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/css/core.min.css'),
     Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/css/utilities.min.css'),
     Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/core.iife.js', type='module'),
-    Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/icon.iife.js', type='module')
+    Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/icon.iife.js', type='module'),
+    Script('const htmlElement = document.documentElement;\r\n\r\n  const __FRANKEN__ = JSON.parse(\r\n    localStorage.getItem("__FRANKEN__") || "{}",\r\n  );\r\n\r\n  if (\r\n    __FRANKEN__.mode === "dark" ||\r\n    (!__FRANKEN__.mode &&\r\n      window.matchMedia("(prefers-color-scheme: dark)").matches)\r\n  ) {\r\n    htmlElement.classList.add("dark");\r\n  } else {\r\n    htmlElement.classList.remove("dark");\r\n  }\r\n\r\n  htmlElement.classList.add(__FRANKEN__.theme || "uk-theme-yellow");\r\n  htmlElement.classList.add(__FRANKEN__.radii || "uk-radii-md");\r\n  htmlElement.classList.add(__FRANKEN__.shadows || "uk-shadows-sm");\r\n  htmlElement.classList.add(__FRANKEN__.font || "uk-font-sm");\r\n  htmlElement.classList.add(__FRANKEN__.chart || "uk-chart-default");')
 )
 htmlkws = dict(cls="bg-background text-foreground font-sans antialiased")
 bodykws = dict(cls="h-screen p-16 bg-white text-foreground font-sans antialiased")
@@ -36,14 +38,13 @@ def Section(title, *content):
 @page(title="FastAPI App", wrap_in=HTMLResponse)
 def index():
     return Main(
-        H1("Hello, world!", cls="uk-h3 mb-2"),
-        Span("Welcome to RustyTags! 🙂"),
-        Section("Updates", 
-            Button("Get some updates", on_click=DS.get("/queries/user"), cls="uk-btn uk-btn-default"),    
-            Input(type="text", id="message",bind="message", cls="uk-input"),
+        Section("Server event updates demo 🙂", 
+            Form(
+                Input(placeholder="Enter your message and press Enter", type="text", bind="message", cls="uk-input"),
+                on_submit=DS.get("/queries/user", contentType="form")
+            ),
             Div(id="updates")
         ),
-    
         signals=signals(message=""),
         on_load=DS.get("/updates")
     )
@@ -67,7 +68,8 @@ async def event_stream(request: Request, signals: ReadSignals):
 def on_event(sender, request: Request, signals: dict | None):
     message = (signals or {}).get("message", "No message provided")
     yield SSE.execute_script(f"UIkit.notification({{message: '{message}'}})")
-    yield SSE.patch_elements(Div(f"Server processed message: {message}",id="updates", cls="text-lg text-bold mt-4 mt-2"))
+    yield SSE.patch_elements(Div(f"Server processed message: {message}", cls="text-lg text-bold mt-4 mt-2"),
+                             selector="#updates", mode=ElementPatchMode.APPEND)
     yield SSE.patch_signals({"message": ""})
 
 @event("events", sender="user")
