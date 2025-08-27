@@ -1,6 +1,6 @@
 from .datastar import *
 from .rusty_tags import HtmlString
-from .utils import Page, create_template, page_template, show
+from .utils import Page, create_template, page_template, show, AttrDict
 """
 RustyTags - High-performance HTML generation library
 
@@ -83,7 +83,7 @@ __all__ = [
     "CustomTag",
 
     # Utilities
-    "Page", "create_template", "page_template", "show",
+    "Page", "create_template", "page_template", "show", "AttrDict",
     # Datastar utilities
     "signals", "reactive_class", "attribute_generator","DS",
 ]

@@ -2,11 +2,17 @@ import asyncio
 import collections.abc as c
 import inspect
 import threading
-from typing import Any, TypeVar
+import uuid
+from typing import Any, Dict, TypeVar, Optional
 
-from blinker import ANY, signal as event, Signal
+from blinker import ANY, Signal
+from blinker import signal as event
+
+from pydantic import BaseModel, Field
 
 SENTINEL = object()
+client_signal = event("client_lifecycle")
+active_clients: Dict[str, 'Client'] = {}
 
 async def _aiter_sync_gen(gen):
     """Bridge a sync generator to async without blocking the event loop."""
@@ -56,57 +62,114 @@ async def _aiter_results(handler, *args, **kwargs):
     # plain sync value
     yield rv
 
-async def blinker_send_stream(sig, sender, out_q: asyncio.Queue, *args, **kwargs):
-    """
-    Iterate all receivers for `sender`, stream their yielded/returned items
-    into `out_q` as soon as they're produced.
-    """
+class Client:
+    """Manages individual client connections with automatic lifecycle handling"""
+    
+    def __init__(self, client_id: str | None = None):
+        self.client_id = client_id or str(uuid.uuid4())
+        self.queue = asyncio.Queue()
+        self.connected = False
+        
+    def connect(self):
+        """Connect client and register with signal system"""
+        if not self.connected:
+            active_clients[self.client_id] = self
+            self.connected = True
+            # Send connection signal
+            client_signal.send("system", action="connect", client=self)
+            print(f"📡 Client {self.client_id} connected. Total: {len(active_clients)}")
+        return self
+    
+    def disconnect(self):
+        """Disconnect client and clean up resources"""
+        if self.connected:
+            active_clients.pop(self.client_id, None)
+            self.connected = False
+            # Send disconnection signal  
+            client_signal.send("system", action="disconnect", client=self)
+            print(f"📡 Client {self.client_id} disconnected. Total: {len(active_clients)}")
+        return self
+    
+    async def stream(self, delay: float = 0.1):
+        """Async generator for streaming updates to this client"""
+        try:
+            while self.connected:
+                try:
+                    event = await asyncio.wait_for(self.queue.get(), timeout=delay)
+                    if event is None or event is SENTINEL or isinstance(event, Exception):
+                        continue
+                    yield event
+                except asyncio.TimeoutError:
+                    continue
+        except Exception as e:
+            print(f"Client {self.client_id} SSE stream error: {e}")
+        finally:
+            self.disconnect()
+    
+    def send(self, item):
+        """Send item to this client's queue"""
+        if self.connected:
+            try:
+                self.queue.put_nowait(item)
+                return True
+            except Exception:
+                self.disconnect()
+                return False
+        return False
+    
+    def __enter__(self):
+        return self.connect()
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.disconnect()
+
+# TODO: This is a hack to broadcast to all clients. It should be replaced with a more efficient way to broadcast to specific clients or all
+def broadcast_to_clients(item):
+    """Broadcast item to all active client queues"""
+    for client_id, client in active_clients.items():
+        client.send(item)
+
+async def blinker_broadcast(sig, sender, *args, **kwargs):
+    """Modified blinker sender that broadcasts to all clients"""
     async def worker(recv):
         try:
             async for item in _aiter_results(recv, sender, *args, **kwargs):
                 if item is not None:
-                    await out_q.put(item)
+                    broadcast_to_clients(item)
         except Exception as e:
-            # push exceptions if you want to surface them to the UI/log
-            await out_q.put(e)
+            broadcast_to_clients(e)
 
-    # Run all receivers concurrently
+    # Run all receivers concurrently and broadcast results
     try:
         async with asyncio.TaskGroup() as tg:
             for recv in sig.receivers_for(sender):
                 tg.create_task(worker(recv))
     finally:
-        # optional: mark end of this dispatch burst
-        await out_q.put(SENTINEL)
+        broadcast_to_clients(SENTINEL)
 
-def send_stream(backend_signal, sender, queue: asyncio.Queue, *args, **kwargs):
-    """
-    Iterate all receivers for `sender`, stream their yielded/returned items
-    into `out_q` as soon as they're produced.
-    """
-    asyncio.create_task(blinker_send_stream(backend_signal, sender, queue, *args, **kwargs))
+def broadcast(backend_signal, sender, *args, **kwargs):
+    """Send to all connected clients using Blinker broadcasting"""
+    asyncio.create_task(blinker_broadcast(backend_signal, sender, *args, **kwargs))
 
-async def process_queue(queue: asyncio.Queue, delay: float = 0.1):
-    try:
-        while True:
-            try:
-                event = await queue.get()
-                if event is None or event is SENTINEL or isinstance(event, Exception):
-                    continue
-                yield event                    
-            except asyncio.QueueEmpty:
-                await asyncio.sleep(delay)
-    except Exception as e:
-        print(f"SSE stream error: {e}")
 
 F = TypeVar("F", bound=c.Callable[..., Any])
 
-def on_event(signal_name: str|Signal, sender: Any = ANY, weak: bool = True) -> c.Callable[[F], F]:
-    if isinstance(signal_name, Signal):
-        sig = signal_name
+def on_event(signal: str|Signal, sender: Any = ANY, weak: bool = True) -> c.Callable[[F], F]:
+    if isinstance(signal, Signal):
+        sig = signal
     else:
-        sig = event(signal_name)
+        sig = event(signal)
     def decorator(fn):
         sig.connect(fn, sender, weak)
         return fn
     return decorator
+
+# Export all public components
+__all__ = [
+    'Client',
+    'event', 
+    'on_event',
+    'broadcast',
+    'client_signal',
+    'SENTINEL'
+]
