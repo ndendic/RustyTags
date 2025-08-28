@@ -30,6 +30,7 @@ def Section(title, *content):
         ),  
         cls="my-4 max-w-md"
     )
+
 def Notification(message):
     element = Div(
         Span(
@@ -65,7 +66,6 @@ async def commands(command: str, sender: str, request: Request, signals: ReadSig
     signals = AttrDict(signals) if signals else AttrDict()
     backend_signal = event(command)
     broadcast(backend_signal, sender, signals=signals, request=request)
-    # return Notification(f"Server processed message from {sender}")
 
 @app.get("/updates")
 @datastar_response
@@ -75,10 +75,9 @@ async def event_stream(request: Request, signals: ReadSignals):
         async for update in client.stream():
             yield update
     
-
 command = event("commands")
 
-@on_event(command, sender="user.global")
+@on_event("commands", sender="user.global")
 async def notify(sender, request: Request, signals: AttrDict):
     message = signals.message or "No message provided" 
     yield Notification(f"Server notification: {message}")
