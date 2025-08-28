@@ -1,16 +1,18 @@
-import asyncio
-from typing import Literal, Any, Mapping
-from datastar_py.starlette import ServerSentEventGenerator as SSE
-from datastar_py.sse import _HtmlProvider
+from typing import Any, Mapping
+
+from blinker import ANY
 from datastar_py.consts import ElementPatchMode
-from blinker import ANY, signal
-from .backend import send, send_async
+from datastar_py.sse import _HtmlProvider
+from datastar_py.starlette import ServerSentEventGenerator as SSE
+
+from .backend import send
+
 
 def elements(
         elements: str | _HtmlProvider,
         selector: str,
         mode: ElementPatchMode,
-        use_view_transitions: bool | None = None,
+        use_view_transition: bool | None = None,
         event_id: str | None = None,
         retry_duration: int | None = None,
         topic: str | list[str] | Any = ANY,
@@ -19,9 +21,9 @@ def elements(
     result = SSE.patch_elements(elements,
         selector=selector,
         mode=mode,
-        # use_view_transitions=use_view_transitions,
-        # event_id=event_id,
-        # retry_duration=retry_duration
+        # use_view_transitions=use_view_transition, TODO there is a bug in datastar_py here
+        event_id=event_id,
+        retry_duration=retry_duration
         )  
     if isinstance(topic, list):
         for t in topic:
