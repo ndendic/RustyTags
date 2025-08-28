@@ -3,7 +3,8 @@ from fastapi.responses import HTMLResponse
 from rusty_tags import *
 from rusty_tags.utils import create_template, AttrDict
 from rusty_tags.datastar import DS, signals
-from rusty_tags.backend import on_event, broadcast, Client, event
+from rusty_tags.backend import on_event, broadcast, Client, event, send, send_async
+from rusty_tags.starlette import elements, remove_elements, signals as fe_signals, execute_script, redirect
 from datastar_py.fastapi import datastar_response, ReadSignals, ServerSentEventGenerator as SSE
 from datastar_py.consts import ElementPatchMode
 
@@ -38,13 +39,14 @@ def Notification(message):
         message,
         cls='flex items-center text-primary'
     )
-    return SSE.execute_script(f"UIkit.notification({{message: '{element}', pos: 'top-right'}})")
+    return execute_script(f"UIkit.notification({{message: '{element}', pos: 'top-right'}})", 
+                          topic="user.global")
 
 @app.get("/")
 @page(title="FastAPI App", wrap_in=HTMLResponse)
 def index():
     return Main(
-        Section("Server event updates demo 🙂", 
+        Section("Server event updates demo 🙂",
             Form(
                 Input(placeholder="Send server some message and press Enter", type="text", bind="message", cls="uk-input"),
                 on_submit=DS.get("/cmds/commands/user.global")
@@ -63,36 +65,40 @@ async def commands(command: str, sender: str, request: Request, signals: ReadSig
     signals = AttrDict(signals) if signals else AttrDict()
     backend_signal = event(command)
     broadcast(backend_signal, sender, signals=signals, request=request)
-    return Notification(f"Server processed message from {sender}")
+    # return Notification(f"Server processed message from {sender}")
 
 @app.get("/updates")
 @datastar_response
 async def event_stream(request: Request, signals: ReadSignals):
     """SSE endpoint with automatic client management"""
-    with Client() as client:
+    with Client(topics=["user.global"]) as client:
         async for update in client.stream():
             yield update
     
 
-@on_event("commands", sender="user")
-def notify(sender, request: Request, signals: AttrDict | None):
-    message = signals.message or "No message provided" 
-    yield Notification(f"Server processed message: {message}")
-    yield SSE.patch_elements(Div(f"Server processed message: {message}", cls="text-lg text-bold mt-4 mt-2"),
-                             selector="#updates", mode=ElementPatchMode.APPEND)
-    yield SSE.patch_signals({"message": ""})
-
 command = event("commands")
 
-@command.connect
-def log(sender, request: Request, signals: dict | None):
-    message = (signals or {}).get("message", "No message provided")
-    print(f"Logging via 'log' handler: {message}")
+@on_event(command, sender="user.global")
+async def notify(sender, request: Request, signals: AttrDict):
+    message = signals.message or "No message provided" 
+    yield Notification(f"Server notification: {message}")
+    yield elements(Div(f"Server processed message: {message}", cls="text-lg text-bold mt-4 mt-2"),
+                             selector="#updates", mode=ElementPatchMode.APPEND, topic="user.global")
+    yield fe_signals({"message": ""}, topic="user.global")
 
-@on_event(command, sender="user")
-async def log_event(sender, request: Request, signals: dict | None):
-    message = (signals or {}).get("message", "No message provided")
-    return print(f"Logging via 'log_event' handler: {message}")
+
+
+# @on_event(command, sender="user.global")
+# def log(sender, request: Request, signals: dict | None):
+#     message = (signals or {}).get("message", "No message provided")
+#     print(f"Logging via 'log' handler: {message}")
+#     return Notification(f"Logging via log handler: {message}")
+
+# @on_event(command, sender="user.global")
+# async def log_event(sender, request: Request, signals: dict | None):
+#     message = (signals or {}).get("message", "No message provided")
+#     print(f"Logging via 'log_event' handler: {message}")
+#     return Notification(f"Logging via 'log_event' handler: {message}")
 
 
 
