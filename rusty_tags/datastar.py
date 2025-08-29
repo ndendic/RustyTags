@@ -10,6 +10,8 @@ from typing import Any, Dict, Union
 from urllib.parse import urlencode
 from datastar_py.attributes import attribute_generator
 from datastar_py import ServerSentEventGenerator as SSE
+from .utils import AttrDict
+
 
 class DS:
     """
@@ -333,6 +335,11 @@ def signals(**kwargs) -> Dict[str, Any]:
     """
     return kwargs
 
+class Signals(AttrDict):
+    """
+    A dictionary of signals with reactive capabilities.
+    """
+    ...
 
 def reactive_class(**conditions) -> Dict[str, str]:
     """

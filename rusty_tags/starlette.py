@@ -1,14 +1,20 @@
 from typing import Any, Mapping
 
-from blinker import ANY
+from .events import ANY
 from datastar_py.consts import ElementPatchMode
 from datastar_py.sse import _HtmlProvider
 from datastar_py.starlette import ServerSentEventGenerator as SSE
 
-from .backend import send
+from .events import emit
 
+def emit_to_topic(topic: str | list[str] | Any, sender: str | Any = ANY, *args, **kwargs):
+    if isinstance(topic, list):
+        for t in topic:
+            emit(t, sender, *args, **kwargs)
+    else:
+        emit(topic, sender, *args, **kwargs)
 
-def elements(
+def sse_elements(
         elements: str | _HtmlProvider,
         selector: str,
         mode: ElementPatchMode,
@@ -25,11 +31,7 @@ def elements(
         event_id=event_id,
         retry_duration=retry_duration
         )  
-    if isinstance(topic, list):
-        for t in topic:
-            send(t, sender, result=result)
-    else:
-        send(topic, sender, result=result)
+    emit_to_topic(topic, sender, result=result)
     return result
 
 def remove_elements(
@@ -45,14 +47,10 @@ def remove_elements(
             event_id=event_id,
             retry_duration=retry_duration,
         )
-        if isinstance(topic, list):
-            for t in topic:
-                send(t, sender, result=result)
-        else:
-            send(topic, sender, result=result)
+        emit_to_topic(topic, sender, result=result)
         return result
 
-def signals(
+def sse_signals(
         signals: dict | str,
         *,
         event_id: str | None = None,
@@ -65,11 +63,7 @@ def signals(
         event_id=event_id,
         only_if_missing=only_if_missing,
         retry_duration=retry_duration)  
-    if isinstance(topic, list):
-        for t in topic:
-            send(t, sender, result=result)
-    else:
-        send(topic, sender, result=result)
+    emit_to_topic(topic, sender, result=result)
     return result
 
 def execute_script(
@@ -86,11 +80,7 @@ def execute_script(
                                 attributes=attributes, 
                                 event_id=event_id, 
                                 retry_duration=retry_duration)
-    if isinstance(topic, list):
-        for t in topic:
-            send(t, sender, result=result)
-    else:
-        send(topic, sender, result=result)
+    emit_to_topic(topic, sender, result=result)
     return result
 
 def redirect(
@@ -98,9 +88,13 @@ def redirect(
         topic: str | list[str] | Any = ANY,
         sender: str | Any = ANY):
     result = SSE.redirect(location)
-    if isinstance(topic, list):
-        for t in topic:
-            send(t, sender, result=result)
-    else:
-        send(topic, sender, result=result)
+    emit_to_topic(topic, sender, result=result)
     return result
+
+__all__ = [
+    'sse_elements',
+    'remove_elements',
+    'sse_signals',
+    'execute_script',
+    'redirect',
+]
