@@ -10,23 +10,30 @@ from datastar_py.fastapi import datastar_response, ReadSignals
 from datastar_py.consts import ElementPatchMode
 from uuid import uuid4
 from typing import Any
-
+from .components.tabs import tabs
+from .components.sidebar import sidebar, navbar
 hdrs = (
-    Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/css/core.min.css'),
-    Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/css/utilities.min.css'),
-    Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/core.iife.js', type='module'),
-    Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/icon.iife.js', type='module'),
-    Script('const htmlElement = document.documentElement;\r\n\r\n  const __FRANKEN__ = JSON.parse(\r\n    localStorage.getItem("__FRANKEN__") || "{}",\r\n  );\r\n\r\n  if (\r\n    __FRANKEN__.mode === "dark" ||\r\n    (!__FRANKEN__.mode &&\r\n      window.matchMedia("(prefers-color-scheme: dark)").matches)\r\n  ) {\r\n    htmlElement.classList.add("dark");\r\n  } else {\r\n    htmlElement.classList.remove("dark");\r\n  }\r\n\r\n  htmlElement.classList.add(__FRANKEN__.theme || "uk-theme-yellow");\r\n  htmlElement.classList.add(__FRANKEN__.radii || "uk-radii-md");\r\n  htmlElement.classList.add(__FRANKEN__.shadows || "uk-shadows-sm");\r\n  htmlElement.classList.add(__FRANKEN__.font || "uk-font-sm");\r\n  htmlElement.classList.add(__FRANKEN__.chart || "uk-chart-default");')
+    # Basecoat CSS
+    Script(src='https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'),
+    Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/basecoat-css@0.3.2/dist/basecoat.cdn.min.css'),
+    Script(src='https://cdn.jsdelivr.net/npm/basecoat-css@0.3.2/dist/js/all.min.js', defer=''),
+    Script("(() => {\r\n    try {\r\n      const stored = localStorage.getItem('themeMode');\r\n      if (stored ? stored === 'dark'\r\n                  : matchMedia('(prefers-color-scheme: dark)').matches) {\r\n        document.documentElement.classList.add('dark');\r\n      }\r\n    } catch (_) {}\r\n\r\n    const apply = dark => {\r\n      document.documentElement.classList.toggle('dark', dark);\r\n      try { localStorage.setItem('themeMode', dark ? 'dark' : 'light'); } catch (_) {}\r\n    };\r\n\r\n    document.addEventListener('basecoat:theme', (event) => {\r\n      const mode = event.detail?.mode;\r\n      apply(mode === 'dark' ? true\r\n            : mode === 'light' ? false\r\n            : !document.documentElement.classList.contains('dark'));\r\n    });\r\n  })();"),
+    # Franken UI
+    # Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/css/core.min.css'),
+    # Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/css/utilities.min.css'),
+    # Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/core.iife.js', type='module'),
+    # Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/icon.iife.js', type='module'),
+    # Script('const htmlElement = document.documentElement;\r\n\r\n  const __FRANKEN__ = JSON.parse(\r\n    localStorage.getItem("__FRANKEN__") || "{}",\r\n  );\r\n\r\n  if (\r\n    __FRANKEN__.mode === "dark" ||\r\n    (!__FRANKEN__.mode &&\r\n      window.matchMedia("(prefers-color-scheme: dark)").matches)\r\n  ) {\r\n    htmlElement.classList.add("dark");\r\n  } else {\r\n    htmlElement.classList.remove("dark");\r\n  }\r\n\r\n  htmlElement.classList.add(__FRANKEN__.theme || "uk-theme-yellow");\r\n  htmlElement.classList.add(__FRANKEN__.radii || "uk-radii-md");\r\n  htmlElement.classList.add(__FRANKEN__.shadows || "uk-shadows-sm");\r\n  htmlElement.classList.add(__FRANKEN__.font || "uk-font-sm");\r\n  htmlElement.classList.add(__FRANKEN__.chart || "uk-chart-default");')
 )
 htmlkws = dict(cls="bg-background text-foreground font-sans antialiased")
-bodykws = dict(cls="h-screen p-16 bg-white text-foreground font-sans antialiased", signals=Signals(message="", conn=""))
+bodykws = dict(cls="h-screen text-foreground font-sans antialiased", signals=Signals(message="", conn=""))
 page = create_template(hdrs=hdrs, htmlkw=htmlkws, bodykw=bodykws)
 
 app = FastAPI()
 
 def Section(title, *content):
     return Div(
-        H2(title, cls="uk-h2 mb-4 text-primary"),
+        H2(title, cls="text-4xl font-extrabold tracking-tight text-balance mb-4 text-primary"),
         Div(
             *content,
             cls=" border rounded-md p-4"
@@ -49,19 +56,25 @@ def Notification(message, topic: str | list[str] = "updates", sender: str | Any 
 @app.get("/")
 @page(title="FastAPI App", wrap_in=HTMLResponse)
 def index():
-    return Main(
-        Section("Server event updates demo 🙂",
-            Form(
-                Input(placeholder="Send server some message and press Enter", 
-                      type="text", bind="message", cls="uk-input"),
-                on_submit=DS.get(f"/cmds/message.send/{uuid4().hex}/")
-                # on_submit="@post('/cmds/commands/user.global', {contentType: 'form'})"
+    return Div(sidebar,Main(
+        navbar,
+        Div(
+            Section("Server event updates demo 🙂",
+                Form(
+                    Input(placeholder="Send server some message and press Enter", 
+                        type="text", bind="message", cls="uk-input"),
+                    on_submit=DS.get(f"/cmds/message.send/{uuid4().hex}/")
+                    # on_submit="@post('/cmds/commands/user.global', {contentType: 'form'})"
+                ),
+                Div(id="updates")
             ),
-            Div(id="updates")
+            tabs,
+            cls="p-4 md:p-6 xl:p-12",
+            id="content"
         ),
         signals=Signals(message=""),
         on_load=DS.get("/updates")
-    )
+    ))
 
 @app.get("/cmds/{command}/{sender}")
 @datastar_response
