@@ -368,7 +368,7 @@ fn map_shorthand_attribute(key: &str) -> Option<String> {
         "show" => Some("ds_show".to_string()),
         "text" => Some("ds_text".to_string()),
         "attrs" => Some("ds_attr".to_string()),
-        "style" => Some("ds_style".to_string()),
+        "data_style" => Some("ds_style".to_string()),
         
         // Common attributes
         "effect" => Some("ds_effect".to_string()),

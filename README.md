@@ -417,7 +417,7 @@ Div(signals={"count": 0}, show="$visible", on_click="$increment()")
 - `show` → `data-show` - Conditional visibility
 - `text` → `data-text` - Dynamic text content
 - `attrs` → `data-attrs` - Dynamic attributes
-- `style` → `data-style` - Dynamic styling
+- `data_style` → `data-style` - Dynamic styling
 
 **Event Attributes:**
 - `on_click`, `on_hover`, `on_submit`, `on_focus`, `on_blur`

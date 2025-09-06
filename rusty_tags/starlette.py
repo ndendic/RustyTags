@@ -17,7 +17,7 @@ def emit_to_topic(topic: str | list[str] | Any, sender: str | Any = ANY, *args, 
 def sse_elements(
         elements: str | _HtmlProvider,
         selector: str,
-        mode: ElementPatchMode,
+        mode: ElementPatchMode = ElementPatchMode.REPLACE,
         use_view_transition: bool | None = None,
         event_id: str | None = None,
         retry_duration: int | None = None,
