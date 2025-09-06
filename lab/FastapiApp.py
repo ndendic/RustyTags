@@ -2,11 +2,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from rusty_tags import *
 from rusty_tags.utils import create_template
-from rusty_tags.datastar import DS, Signals
-from rusty_tags.events import on, emit_async, event, ANY
+from rusty_tags.datastar import Signals, DS
+from rusty_tags.events import event, emit_async, on, ANY
 from rusty_tags.client import Client
 from rusty_tags.starlette import *
-from datastar_py.fastapi import datastar_response, ReadSignals
+from datastar_py.fastapi import  ReadSignals
 from datastar_py.consts import ElementPatchMode
 from uuid import uuid4
 from typing import Any
