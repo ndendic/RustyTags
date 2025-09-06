@@ -10,6 +10,7 @@ from typing import Any, Dict, Union
 from urllib.parse import urlencode
 from datastar_py.attributes import attribute_generator
 from datastar_py import ServerSentEventGenerator as SSE
+from datastar_py.consts import ElementPatchMode, EventType
 from .utils import AttrDict
 
 
@@ -361,7 +362,10 @@ def reactive_class(**conditions) -> Dict[str, str]:
 __all__ = [
     'DS',
     'signals', 
+    'Signals',
     'reactive_class',
     'attribute_generator',
-    'SSE'
+    'SSE',
+    'ElementPatchMode',
+    'EventType'
 ]

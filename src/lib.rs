@@ -80,7 +80,8 @@ impl DatastarValue {
                s.contains("$") ||              // Contains signal references
                s.contains("@") ||              // Contains action references
                s.starts_with("new ") ||        // JavaScript constructors
-               s.contains("()") ||             // Function calls
+               s.contains("()") ||             // Function calls (no params)
+               s.contains("(") ||              // Function calls (with params)
                s.contains("===") ||            // Strict equality
                s.contains("!==") ||            // Strict inequality
                s.contains("&&") ||             // Logical AND
@@ -132,8 +133,8 @@ impl DatastarValue {
         match self {
             DatastarValue::Expression(expr) => expr.clone(),
             DatastarValue::String(s) => {
-                // Escape single quotes for HTML attribute value
-                s.replace('\'', "\\'")
+                // Return string as-is, no escaping needed since HTML attributes use double quotes
+                s.clone()
             },
             DatastarValue::Boolean(b) => b.to_string(),
             DatastarValue::Number(n) => {
@@ -406,6 +407,15 @@ fn map_shorthand_attribute(key: &str) -> Option<String> {
     }
 }
 
+/// Context for processing attribute key-value pairs
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum AttributeContext {
+    /// Processing keyword arguments (kwargs) - should not expand mappings for datastar attrs
+    Kwargs,
+    /// Processing positional dict children - should expand mappings as individual attributes
+    PositionalDict,
+}
+
 /// Process a single attribute key-value pair, handling shorthand attributes and Mapping expansion
 #[inline]
 fn process_attribute_key_value(
@@ -414,33 +424,37 @@ fn process_attribute_key_value(
     processor: &DatastarProcessor,
     attrs: &mut HashMap<String, String>,
     datastar_attrs: &mut HashMap<String, DatastarValue>,
+    context: AttributeContext,
     py: Python,
 ) -> PyResult<()> {
     // First check if the value is a Mapping and should be expanded
-    // Check if it's a PyDict specifically, as that's the most common case
-    if value.is_instance_of::<PyDict>() && !key_str.starts_with("ds_") && key_str != "cls" {
-        let dict = value.downcast::<PyDict>()?;
-        // Expand the mapping as individual attributes
-        for (map_key, map_value) in dict.iter() {
-            let map_key_str = map_key.extract::<String>()?;
-            // Recursively process each key-value pair from the mapping
-            process_attribute_key_value(&map_key_str, &map_value, processor, attrs, datastar_attrs, py)?;
+    // Only expand mappings when processing positional dict children, not kwargs
+    if context == AttributeContext::PositionalDict {
+        // Check if it's a PyDict specifically, as that's the most common case
+        if value.is_instance_of::<PyDict>() && !key_str.starts_with("ds_") && key_str != "cls" {
+            let dict = value.downcast::<PyDict>()?;
+            // Expand the mapping as individual attributes
+            for (map_key, map_value) in dict.iter() {
+                let map_key_str = map_key.extract::<String>()?;
+                // Recursively process each key-value pair from the mapping
+                process_attribute_key_value(&map_key_str, &map_value, processor, attrs, datastar_attrs, context, py)?;
+            }
+            return Ok(());
         }
-        return Ok(());
-    }
-    // For other mapping-like objects, try to check for items() method
-    else if !key_str.starts_with("ds_") && key_str != "cls" {
-        if let Ok(items) = value.call_method0("items") {
-            if let Ok(items_list) = items.downcast::<PyList>() {
-                for item in items_list.iter() {
-                    // Extract key-value pair from tuple
-                    if let Ok(tuple) = item.extract::<(String, PyObject)>() {
-                        let (map_key_str, map_value) = tuple;
-                        let map_value_bound = map_value.bind(py);
-                        process_attribute_key_value(&map_key_str, map_value_bound, processor, attrs, datastar_attrs, py)?;
+        // For other mapping-like objects, try to check for items() method
+        else if !key_str.starts_with("ds_") && key_str != "cls" {
+            if let Ok(items) = value.call_method0("items") {
+                if let Ok(items_list) = items.downcast::<PyList>() {
+                    for item in items_list.iter() {
+                        // Extract key-value pair from tuple
+                        if let Ok(tuple) = item.extract::<(String, PyObject)>() {
+                            let (map_key_str, map_value) = tuple;
+                            let map_value_bound = map_value.bind(py);
+                            process_attribute_key_value(&map_key_str, map_value_bound, processor, attrs, datastar_attrs, context, py)?;
+                        }
                     }
+                    return Ok(());
                 }
-                return Ok(());
             }
         }
     }
@@ -718,6 +732,11 @@ fn convert_attribute_value(value_obj: &Bound<'_, pyo3::PyAny>, _py: Python) -> P
 // Enhanced child processing with smart type conversion and __html__ support
 #[inline(always)]
 fn process_child_object(child_obj: &PyObject, py: Python) -> PyResult<String> {
+    // Fast path for None - return empty string to ignore it
+    if child_obj.bind(py).is_none() {
+        return Ok(String::new());
+    }
+    
     // Fast path for HtmlString - direct access to content
     if let Ok(html_string) = child_obj.extract::<PyRef<HtmlString>>(py) {
         return Ok(html_string.content.clone());
@@ -1145,7 +1164,7 @@ impl TagBuilder {
         if let Some(kwargs) = kwargs {
             for (key, value) in kwargs.iter() {
                 let key_str = key.extract::<String>()?;
-                process_attribute_key_value(&key_str, &value, &processor, &mut self.attrs, &mut self.datastar_attrs, py)?;
+                process_attribute_key_value(&key_str, &value, &processor, &mut self.attrs, &mut self.datastar_attrs, AttributeContext::Kwargs, py)?;
             }
         }
         
@@ -1153,11 +1172,11 @@ impl TagBuilder {
         for child in children {
             let child_bound = child.bind(py);
             if child_bound.is_instance_of::<PyDict>() {
-                // This child is a dict - expand it as kwargs
+                // This child is a dict - expand it as positional dict
                 let dict = child_bound.downcast::<PyDict>()?;
                 for (key, value) in dict.iter() {
                     let key_str = key.extract::<String>()?;
-                    process_attribute_key_value(&key_str, &value, &processor, &mut self.attrs, &mut self.datastar_attrs, py)?;
+                    process_attribute_key_value(&key_str, &value, &processor, &mut self.attrs, &mut self.datastar_attrs, AttributeContext::PositionalDict, py)?;
                 }
             } else {
                 // Regular child content
@@ -1289,7 +1308,7 @@ macro_rules! html_tag_optimized {
             if let Some(kwargs) = kwargs {
                 for (key, value) in kwargs.iter() {
                     let key_str = key.extract::<String>()?;
-                    process_attribute_key_value(&key_str, &value, &processor, &mut attrs, &mut datastar_attrs, py)?;
+                    process_attribute_key_value(&key_str, &value, &processor, &mut attrs, &mut datastar_attrs, AttributeContext::Kwargs, py)?;
                 }
             }
             
@@ -1297,11 +1316,11 @@ macro_rules! html_tag_optimized {
             for child in children {
                 let child_bound = child.bind(py);
                 if child_bound.is_instance_of::<PyDict>() {
-                    // This child is a dict - expand it as kwargs
+                    // This child is a dict - expand it as positional dict
                     let dict = child_bound.downcast::<PyDict>()?;
                     for (key, value) in dict.iter() {
                         let key_str = key.extract::<String>()?;
-                        process_attribute_key_value(&key_str, &value, &processor, &mut attrs, &mut datastar_attrs, py)?;
+                        process_attribute_key_value(&key_str, &value, &processor, &mut attrs, &mut datastar_attrs, AttributeContext::PositionalDict, py)?;
                     }
                 } else {
                     // Regular child content

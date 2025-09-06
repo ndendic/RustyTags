@@ -63,7 +63,6 @@ def page_template(page_title: str = "MyPage", hdrs:Optional[tuple]=None,ftrs:Opt
     template = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw, title=page_title)
     return template
 
-
 def show(html: HtmlString):
     try:
         from IPython.display import HTML
@@ -71,7 +70,6 @@ def show(html: HtmlString):
     except ImportError:
         raise ImportError("IPython is not installed. Please install IPython to use this function.")
     
-
 class AttrDict(dict):
     "`dict` subclass that also provides access to keys as attrs"
     def __getattr__(self,k): return self[k] if k in self else None

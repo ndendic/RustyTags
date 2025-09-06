@@ -172,6 +172,9 @@ __all__ = [
     'emit',
     'emit_async',
     'Event',
+    'Namespace',
+    'ANY',
+    'default_namespace',
 ]
 
 

@@ -2,6 +2,8 @@ from .datastar import *
 from .rusty_tags import HtmlString
 from .utils import Page, create_template, page_template, show, AttrDict
 from .client import Client
+from .events import *
+from .datastar import *
 """
 RustyTags - High-performance HTML generation library
 
@@ -89,4 +91,22 @@ __all__ = [
     "signals", "reactive_class", "attribute_generator","DS",
     # Client
     "Client",
+    # Events
+    "Namespace",
+    "ANY",
+    "default_namespace",
+    "event",
+    "on",
+    "emit",
+    "emit_async",
+    "Event",
+    # Datastar
+    'DS',
+    'signals', 
+    'Signals',
+    'reactive_class',
+    'attribute_generator',
+    'SSE',
+    'ElementPatchMode',
+    'EventType'
 ]

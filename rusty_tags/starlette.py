@@ -1,9 +1,11 @@
 from typing import Any, Mapping
 
+from .datastar import SSE
 from .events import ANY
 from datastar_py.consts import ElementPatchMode
 from datastar_py.sse import _HtmlProvider
-from datastar_py.starlette import ServerSentEventGenerator as SSE
+from datastar_py.starlette import datastar_response
+
 
 from .events import emit
 
@@ -97,4 +99,5 @@ __all__ = [
     'sse_signals',
     'execute_script',
     'redirect',
+    'datastar_response',
 ]
