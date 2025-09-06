@@ -1,6 +1,10 @@
 [package]
 name = "rusty_tags"
+<<<<<<< HEAD
 version = "0.5.23"
+=======
+version = "0.5.26"
+>>>>>>> 7bc825b (🔧 Update `rusty_tags` library to version 0.5.26 and adjust Python compatibility)
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

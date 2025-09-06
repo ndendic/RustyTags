@@ -258,7 +258,11 @@ dependencies = [
 
 [[package]]
 name = "rusty_tags"
+<<<<<<< HEAD
 version = "0.5.23"
+=======
+version = "0.5.26"
+>>>>>>> 7bc825b (🔧 Update `rusty_tags` library to version 0.5.26 and adjust Python compatibility)
 dependencies = [
  "ahash",
  "bumpalo",
