@@ -80,7 +80,7 @@ tests/
 .claude/
 .cursor/
 .bmad-core/
-CLAUDE.md
+# CLAUDE.md
 RustyMonsterUI/
 
 # notebooks

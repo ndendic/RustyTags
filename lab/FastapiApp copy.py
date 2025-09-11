@@ -10,23 +10,32 @@ from datastar_py.fastapi import  ReadSignals
 from datastar_py.consts import ElementPatchMode
 from uuid import uuid4
 from typing import Any
-from rusty_tags.components.inputs import Input
-from fastapi.staticfiles import StaticFiles
 
-hdrs = (Link(rel='stylesheet', href='/static/css/main.css'),)
-htmlkws = dict(cls="")
-bodykws = dict(cls="page", signals=Signals(message="", conn=""))
+hdrs = (
+    # Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/css/core.min.css'),
+    # Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/css/utilities.min.css'),
+    # Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/core.iife.js', type='module'),
+    # Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/icon.iife.js', type='module'),
+    Link(rel='stylesheet', href='https://unpkg.com/open-props'),
+    Link(rel='stylesheet', href='https://unpkg.com/open-props/normalize.min.css'),
+    Link(rel='stylesheet', href='https://unpkg.com/open-props/buttons.min.css'),
+
+    Script('const htmlElement = document.documentElement;\r\n\r\n  const __FRANKEN__ = JSON.parse(\r\n    localStorage.getItem("__FRANKEN__") || "{}",\r\n  );\r\n\r\n  if (\r\n    __FRANKEN__.mode === "dark" ||\r\n    (!__FRANKEN__.mode &&\r\n      window.matchMedia("(prefers-color-scheme: dark)").matches)\r\n  ) {\r\n    htmlElement.classList.add("dark");\r\n  } else {\r\n    htmlElement.classList.remove("dark");\r\n  }\r\n\r\n  htmlElement.classList.add(__FRANKEN__.theme || "uk-theme-yellow");\r\n  htmlElement.classList.add(__FRANKEN__.radii || "uk-radii-md");\r\n  htmlElement.classList.add(__FRANKEN__.shadows || "uk-shadows-sm");\r\n  htmlElement.classList.add(__FRANKEN__.font || "uk-font-sm");\r\n  htmlElement.classList.add(__FRANKEN__.chart || "uk-chart-default");')
+)
+htmlkws = dict(cls="bg-background text-foreground font-sans antialiased")
+bodykws = dict(cls="h-screen p-16 bg-white text-foreground font-sans antialiased", signals=Signals(message="", conn=""))
 page = create_template(hdrs=hdrs, htmlkw=htmlkws, bodykw=bodykws)
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="lab/static"), name="static")
 
 def Section(title, *content):
     return Div(
-        H2(title),
+        H2(title, cls="uk-h2 mb-4 text-primary"),
         Div(
             *content,
+            cls=" border rounded-md p-4"
         ),  
+        cls="my-4 max-w-md"
     )
 
 def Notification(message, topic: str | list[str] = "updates", sender: str | Any = ANY):
@@ -47,15 +56,13 @@ def index():
     return Main(
         Section("Server event updates demo 🙂",
             Form(
-                Input(label="Message", placeholder="Something...", 
-                      supporting_text="Send server some message and press Enter", 
-                      type="text", bind="message"),
+                Input(placeholder="Send server some message and press Enter", 
+                      type="text", bind="message", cls="uk-input"),
                 on_submit=DS.get(f"/cmds/message.send/{uuid4().hex}/")
                 # on_submit="@post('/cmds/commands/user.global', {contentType: 'form'})"
             ),
             Div(id="updates")
         ),
-        cls="container",
         signals=Signals(message=""),
         on_load=DS.get("/updates")
     )
@@ -82,7 +89,7 @@ async def notify(sender, request: Request, signals: Signals):
     yield sse_elements(Div(f"Server processed message: {message}", cls="text-lg text-bold mt-4 mt-2"),
                              selector="#updates", mode=ElementPatchMode.APPEND, topic="updates")
     yield sse_signals({"message": ""}, topic="updates")
-    # yield Notification(f"Server notification: {message}")
+    yield Notification(f"Server notification: {message}")
 
 
 
