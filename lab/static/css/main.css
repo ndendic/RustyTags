@@ -13,14 +13,13 @@ Ideally it's the root/entry CSS file in your project.
     h2 {
         margin-block: var(--size-4);
     }
-    main {
-        background-color: var(--gradient-16);
+    html {
+        background: var(--gradient-16);
     }
 
     .container {
         width: min(100% - 2rem, 50rem);
         margin-inline: auto;
-        background-color: var(--gradient-16);
         display: grid;
         place-items: center;
     }

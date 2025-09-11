@@ -6,6 +6,7 @@ from rusty_tags.datastar import Signals, DS
 from rusty_tags.events import event, emit_async, on, ANY
 from rusty_tags.client import Client
 from rusty_tags.starlette import *
+from rusty_tags.components.sheet import Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger
 from datastar_py.fastapi import  ReadSignals
 from datastar_py.consts import ElementPatchMode
 from uuid import uuid4
@@ -29,32 +30,104 @@ def Section(title, *content):
         ),  
     )
 
-def Notification(message, topic: str | list[str] = "updates", sender: str | Any = ANY):
-    element = Div(
-        Span(
-            CustomTag('uk-icon', icon='rocket'),
-            cls='flex-none mr-2'
-        ),
-        message,
-        cls='flex items-center text-primary'
-    )
-    return execute_script(f"UIkit.notification({{message: '{element}', pos: 'top-right'}})", 
-                          topic=topic, sender=sender)
-
 @app.get("/")
 @page(title="FastAPI App", wrap_in=HTMLResponse)
 def index():
     return Main(
-        Section("Server event updates demo 🙂",
+        Section("Input fields 🙂",
             Form(
-                Input(label="Message", placeholder="Something...", 
+                Input(label="Username", placeholder="Something...", 
                       supporting_text="Send server some message and press Enter", 
-                      type="text", bind="message"),
-                on_submit=DS.get(f"/cmds/message.send/{uuid4().hex}/")
-                # on_submit="@post('/cmds/commands/user.global', {contentType: 'form'})"
+                      type="text", bind="username"),
+                Input(label="Password", placeholder="Password", 
+                      supporting_text="Send server some password and press Enter", 
+                      type="password", bind="password"),
+                Input(label="Email", placeholder="Email", 
+                      supporting_text="Send server some email and press Enter", 
+                      type="email", bind="email"),
+                Input(label="Phone", placeholder="Phone", 
+                      supporting_text="Send server some phone and press Enter", 
+                      type="tel", bind="phone"),
+                Input(label="Date", placeholder="Date", 
+                      supporting_text="Send server some date and press Enter", 
+                      type="date", bind="date"),
+                Input(label="Time", placeholder="Time", 
+                      supporting_text="Send server some time and press Enter", 
+                      type="time", bind="time"),
+                Input(label="URL", placeholder="URL", 
+                      supporting_text="Send server some URL and press Enter", 
+                      type="url", bind="url"),
+                Input(label="Search", placeholder="Search", 
+                      supporting_text="Send server some search and press Enter", 
+                      type="search", bind="search"),
+                Input(label="Month", placeholder="Month", 
+                      supporting_text="Send server some month and press Enter", 
+                      type="month", bind="month"),
+                Input(label="Number", placeholder="Number", 
+                      supporting_text="Send server some number and press Enter", 
+                      type="number", bind="number"),
+                Input(label="Week", placeholder="Week", 
+                      supporting_text="Send server some week and press Enter", 
+                      type="week", bind="week"),
+                Input(label="Datetime", placeholder="Datetime", 
+                      supporting_text="Send server some datetime and press Enter", 
+                      type="datetime-local", bind="datetime"),
+                on_submit=DS.get(f"/cmds/message.send/{uuid4().hex}/"),
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; width: 100%;",
             ),
-            Div(id="updates")
+            Div(id="updates"),
         ),
+        cls="container",
+        signals=Signals(message=""),
+        on_load=DS.get("/updates")
+    )
+
+@app.get("/sheets")
+@page(title="FastAPI App", wrap_in=HTMLResponse)
+def sheets():
+    SheetSide = ["top", "right", "bottom", "left"]
+    return Main(
+        Div(
+                    H2("Sheet (Modal Drawer)", cls="text-2xl font-semibold mb-4"),
+                    Div(
+                        *[SheetTrigger(f"Open {side.capitalize()} Sheet", signal=f"demo_sheet_{side}") for side in SheetSide],
+                        cls="grid grid-cols-2 gap-2 items-center",
+                    ), 
+                    *[Sheet(
+                        SheetContent(
+                            SheetHeader(
+                                SheetTitle("Sheet Title", signal=f"demo_sheet_{side}"),
+                                SheetDescription(
+                                    "This is a sheet description.", signal="demo_sheet"
+                                ),
+                            ),
+                            Div(
+                                P(
+                                    "Sheet content goes here. Press ESC or click outside to close."
+                                ),
+                                Input("Input",placeholder="Type something..."),
+                                cls="p-6 space-y-4",
+                            ),
+                            SheetFooter(
+                                Button(
+                                    "Cancel",
+                                    on_click=f"$demo_sheet_{side}_open = false",
+                                    variant="outline",
+                                ),
+                                Button("Save Changes"),
+                            ),
+                            signal=f"demo_sheet_{side}",
+                            side=side,
+                            size="md",
+                        ),
+                        signal=f"demo_sheet_{side}",
+                        side=side,
+                        size="md",
+                        modal=True,
+                    ) for side in SheetSide],
+                    cls="container mx-auto p-8",
+                    id="content",
+                ),
         cls="container",
         signals=Signals(message=""),
         on_load=DS.get("/updates")
