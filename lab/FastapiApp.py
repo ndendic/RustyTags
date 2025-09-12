@@ -100,23 +100,7 @@ def index():
 @page(title="Playground 🎉", wrap_in=HTMLResponse)
 def playground():
     return Div(
-        # Sidebar root with internal signals; overlay auto on small screens
-        Sidebar(
-            {"label": "Home", "href": "#"},
-            {"label": "Projects", "children": [
-                {"label": "Alpha", "href": "#"},
-                {"label": "Beta", "href": "#"}
-            ]},
-            {"label": "Settings", "href": "#"},
-            title="Demo Sidebar",
-            side="left",
-            mode="push",
-            overlay="never",
-            signal="demoSidebar",
-            default_open=True,
-            controlled=True,
-            control_var="sidebarOpen"
-        ),
+        
         Main(
             # Open Props + Datastar playground examples
             Section("Sidebar demo",
@@ -124,6 +108,24 @@ def playground():
                     Button("Toggle sidebar", cls="button outlined", on_click="$sidebarOpen = !$sidebarOpen"),
                     style="display:flex; gap: var(--size-3); align-items:center;"
                 ),
+                # Sidebar root with internal signals; overlay auto on small screens
+                Sidebar(
+                    {"label": "Home", "href": "#"},
+                    {"label": "Projects", "children": [
+                        {"label": "Alpha", "href": "#"},
+                        {"label": "Beta", "href": "#"}
+                    ]},
+                    {"label": "Settings", "href": "#"},
+                    title="Demo Sidebar",
+                    side="left",
+                    mode="push",
+                    overlay="never",
+                    signal="demoSidebar",
+                    default_open=True,
+                    controlled=True,
+                    control_var="sidebarOpen"
+                ),
+                signals=Signals(sidebarOpen=True),
             ),
             # main content placeholder to demonstrate push
             Div(
@@ -235,7 +237,7 @@ def playground():
             ),
 
             cls="container main",
-            signals=Signals(message="", rounded=False, intensity=3, dark=False, sidebarOpen=True),
+            signals=Signals(message="", rounded=False, intensity=3, dark=False),
             # on_load=DS.get("/updates")
         ),
         
