@@ -13,7 +13,7 @@ Ideally it's the root/entry CSS file in your project.
     h2 {
         margin-block: var(--size-4);
     }
-    main {
+    html {
         background-color: var(--gradient-16);
     }
 

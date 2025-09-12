@@ -11,6 +11,7 @@ from datastar_py.consts import ElementPatchMode
 from uuid import uuid4
 from typing import Any
 from rusty_tags.components.inputs import Input
+from rusty_tags.components.sidebar import Sidebar, SidebarItem, SidebarToggle, create_nav_item
 from fastapi.staticfiles import StaticFiles
 
 hdrs = (Link(rel='stylesheet', href='/static/css/main.css'),)
@@ -58,6 +59,64 @@ def index():
         cls="container",
         signals=Signals(message=""),
         on_load=DS.get("/updates")
+    )
+
+@app.get("/playground")
+@page(title="Playground 🎉", wrap_in=HTMLResponse)
+def playground():
+    # Create navigation items
+    nav_items = [
+        create_nav_item("Dashboard", href="/", icon="🏠"),
+        create_nav_item("Components", icon="🧩", children=[
+            {"label": "Forms", "href": "/forms"},
+            {"label": "Navigation", "href": "/navigation"},
+            {"label": "Layout", "href": "/layout"}
+        ]),
+        create_nav_item("Settings", href="/settings", icon="⚙️"),
+        create_nav_item("Help", href="/help", icon="❓")
+    ]
+    
+    return Div(
+        # Sidebar component
+        Sidebar(
+            *nav_items,
+            title="RustyTags UI",
+            collapsed=False,
+            width="280px"
+        ),
+        
+        # Main content area with header
+        Div(
+            # Header with toggle button
+            Header(
+                SidebarToggle(button_class="sidebar-toggle-btn"),
+                H1("Sidebar Demo"),
+                cls="page-header"
+            ),
+            
+            Main(
+                P("This is a demo of the interactive sidebar component built with Open Props UI and Datastar."),
+                
+                Section("Features",
+                    Ul(
+                        Li("🎨 Open Props UI styling"),
+                        Li("⚡ Datastar interactivity"), 
+                        Li("📱 Responsive design"),
+                        Li("🔧 Collapsible sections"),
+                        Li("🖱️ Toggle collapse/expand")
+                    )
+                ),
+                
+                cls="main-content"
+            ),
+            
+            cls="page-with-sidebar",
+            **{
+                "data-style": "margin-inline-start: $collapsed ? '60px' : '280px'"
+            }
+        ),
+        
+        cls="playground-layout"
     )
 
 @app.get("/cmds/{command}/{sender}")
