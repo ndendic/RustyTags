@@ -27,12 +27,36 @@
     position: fixed;
     inset-block-start: 0;
     inset-inline-start: 0;
-    z-index: 100;
+    z-index: var(--layer-5, 9991);
     
     @media (prefers-reduced-motion: no-preference) {
       transition: inline-size 0.3s var(--ease-out-3);
     }
   }
+
+  /* Hidden by default for over mode; open/closed handled via data_class */
+  [data-sidebar-role="panel"].closed[data-sidebar-side="left"] { transform: translateX(-100%); }
+  [data-sidebar-role="panel"].open[data-sidebar-side="left"] { transform: translateX(0); }
+  [data-sidebar-role="panel"].closed[data-sidebar-side="right"] { transform: translateX(100%); }
+  [data-sidebar-role="panel"].open[data-sidebar-side="right"] { transform: translateX(0); }
+
+
+  /* Root wrapper orchestration */
+  [data-sidebar-root] { position: relative; }
+
+  /* Dedicated overlay element */
+  [data-sidebar-role="overlay"] {
+    position: fixed;
+    inset: 0;
+    background: oklch(0 0 0 / 0.45);
+    opacity: 0;
+    pointer-events: none;
+    z-index: var(--layer-4, 9990);
+    transition: opacity 200ms var(--ease-3);
+  }
+  /* Only show overlay when allowed by overlay strategy */
+  [data-sidebar-root][data-sidebar-overlay="always"] [data-sidebar-role="overlay"].open { opacity: 1; pointer-events: auto; }
+  [data-sidebar-role="overlay"].closed { opacity: 0; pointer-events: none; }
   
   .sidebar.collapsed {
     .sidebar-title {
@@ -209,18 +233,13 @@
     }
   }
   
-  /* Layout adjustments for main content when sidebar is present */
-  .page-with-sidebar {
-    margin-inline-start: 280px; /* Use explicit value instead of CSS variable for reliability */
-    min-block-size: 100vh;
-    
-    @media (prefers-reduced-motion: no-preference) {
-      transition: margin-inline-start 0.3s ease;
-    }
-    
-    &[data-sidebar-collapsed="true"] {
-      margin-inline-start: 60px;
-    }
+  /* Push mode: shift content even if sidebar is nested, using :has on page root */
+  .page .main { transition: margin-inline-start 0.3s ease, margin-inline-end 0.3s ease; }
+  .page:has([data-sidebar-root][data-sidebar-mode="push"].open[data-sidebar-side="left"]) .main {
+    margin-inline-start: var(--sidebar-width);
+  }
+  .page:has([data-sidebar-root][data-sidebar-mode="push"].open[data-sidebar-side="right"]) .main {
+    margin-inline-end: var(--sidebar-width);
   }
   
   /* Page header with toggle button */
@@ -287,13 +306,10 @@
       margin-inline-start: 0;
     }
     
-    /* Mobile overlay */
-    .sidebar[data-mobile-open="true"]::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background-color: oklch(0 0 0 / 0.5);
-      z-index: -1;
+    /* Auto overlay on small screens, if root uses overlay=auto */
+    [data-sidebar-root][data-sidebar-overlay="auto"] [data-sidebar-role="overlay"].open {
+      opacity: 1;
+      pointer-events: auto;
     }
   }
 }

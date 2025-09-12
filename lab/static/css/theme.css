@@ -9,7 +9,7 @@ OPUI default theme
       --color-scheme: dark;
     }
   
-    :where(html) {
+    :where(body) {
       color-scheme: var(--color-scheme, light dark);
   
       --palette-hue: var(--oklch-teal);
@@ -99,7 +99,7 @@ OPUI default theme
       --palette-hue-rotate-by: 1;
     }
   
-    :where(html) {
+    :where(body) {
       --red: oklch(from var(--color-9) l 0.2 25);
       --blue: oklch(from var(--color-9) l 0.2 210);
       --green: oklch(from var(--color-9) l 0.2 145);
@@ -107,7 +107,7 @@ OPUI default theme
     }
   
     /* Gray palette */
-    :where(html) {
+    :where(body) {
       --gray-chroma: 0.01;
       --gray-lightness: 255;
   

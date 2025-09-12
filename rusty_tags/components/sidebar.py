@@ -1,6 +1,6 @@
 import rusty_tags as rt
-from typing import List, Dict, Optional, Union
-from ..datastar import DS, signals
+from typing import List, Dict, Optional, Literal
+from ..datastar import signals
 
 def SidebarItem(
         label: str, 
@@ -51,11 +51,11 @@ def SidebarItem(
         item_wrapper = rt.Button(
             *item_content,
             cls="sidebar-item collapsible",
-            on_click=DS.chain(
-                "$toggleExpanded(this)",
-                "this.setAttribute('data-expanded', !JSON.parse(this.getAttribute('data-expanded') || 'false'))",
-                "this.querySelector('.end').style.transform = JSON.parse(this.getAttribute('data-expanded')) ? 'rotate(90deg)' : 'rotate(0deg)'"
-            ),
+            # on_click=DS.chain(
+            #     "$toggleExpanded(this)",
+            #     "this.setAttribute('data-expanded', !JSON.parse(this.getAttribute('data-expanded') || 'false'))",
+            #     "this.querySelector('.end').style.transform = JSON.parse(this.getAttribute('data-expanded')) ? 'rotate(90deg)' : 'rotate(0deg)'"
+            # ),
             **{"data-expanded": "false"}
         )
     else:
@@ -80,8 +80,8 @@ def SidebarItem(
         nested_list = rt.Ul(
             *nested_items,
             cls="list nested",
-            show="$isExpanded(this.parentElement)",
-            style="display: none; padding-left: var(--size-4);"
+            # show="$isExpanded(this.parentElement)",
+            # style="display: none; padding-left: var(--size-4);"
         )
         
         list_item = rt.Li(item_wrapper, nested_list)
@@ -93,6 +93,13 @@ def Sidebar(
         *items,
         title: Optional[str] = None,
         collapsed: bool = False,
+        side: Literal["left", "right"] = "left",
+        mode: Literal["over", "push"] = "push",
+        overlay: Literal["auto", "always", "never"] = "auto",
+        signal: str = "sidebar",
+        default_open: bool = True,
+        controlled: bool = False,
+        control_var: str = "open",
         **kwargs
     ):
     """
@@ -138,18 +145,45 @@ def Sidebar(
             role="navigation"
         )
     )
-    
-    # Create the complete sidebar
-    return rt.Aside(
+
+    # Sidebar panel (keeps existing .sidebar class for styling)
+    panel = rt.Aside(
         *sidebar_content,
         cls="sidebar",
-        signals=signals(collapsed=collapsed, expandedItems={}),
-        style="width: 60px; transition: width 0.3s ease",
         **{
             "data-style": "{width: $collapsed ? '60px' : '280px'}",
-            "data-class-collapsed": "$collapsed"
+            "data-class-collapsed": "$collapsed",
+            "data-sidebar-role": "panel",
+            "data-sidebar-side": side,
+            "data_class": f"{{open: ${control_var}, closed: !${control_var}}}",
         },
         **kwargs
+    )
+
+    # Overlay (separate sibling element for robust layering)
+    overlay_el = rt.Div(
+        **{
+            "data-sidebar-role": "overlay",
+            "data_class": f"{{open: ${control_var}, closed: !${control_var}}}",
+            "on_click": f"${control_var} = false",
+        }
+    )
+
+    # Root wrapper controlling overlay strategy and mode
+    root_attrs = {
+        "data-sidebar-root": signal,
+        "data-sidebar-mode": mode,
+        "data-sidebar-overlay": overlay,
+        "data-sidebar-side": side,
+        "data_class": f"{{open: ${control_var}, closed: !${control_var}}}",
+    }
+
+    # Provide signals only if uncontrolled; otherwise inherit from parent scope
+    return rt.Div(
+        overlay_el,
+        panel,
+        **root_attrs,
+        **({} if controlled else dict(signals=signals(collapsed=collapsed, expandedItems={}, **{control_var: default_open})))
     )
 
 
@@ -163,7 +197,7 @@ def SidebarToggle(button_class: str = "sidebar-toggle", **kwargs):
     return rt.Button(
         "☰",
         cls=button_class,
-        on_click=DS.set("collapsed", "!$collapsed"),
+        on_click="$collapsed = !$collapsed",
         title="Toggle sidebar",
         **kwargs
     )
