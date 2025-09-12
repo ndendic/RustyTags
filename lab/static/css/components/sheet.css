@@ -1,0 +1,324 @@
+@layer components.extended {
+  /* 
+   * Sheet Component - Open Props UI Compatible
+   * Modal/drawer component with various positions and sizes
+   */
+
+  :root {
+    /* Overlay: solid dark scrim without blur for crisp panel edges */
+    --sheet-overlay-bg: oklch(0 0 0 / 0.45);
+
+    /* Component-local tokens with robust fallbacks so theme tokens can be absent */
+    --sheet-bg: var(--surface-default, white);
+    --sheet-border: var(--field-border-color, var(--border-color, oklch(0 0 0 / 15%)));
+    --sheet-text: var(--text-color-1, CanvasText);
+    --sheet-shadow: var(--shadow-2);
+    --sheet-radius: var(--radius-2);
+    --sheet-transition-duration: 300ms;
+    --sheet-transition-easing: var(--ease-3);
+    
+    /* Sheet sizes */
+    --sheet-size-sm: min(400px, 90vw);
+    --sheet-size-md: min(500px, 90vw);
+    --sheet-size-lg: min(650px, 90vw);
+    --sheet-size-xl: min(800px, 90vw);
+    --sheet-size-full: 100%;
+  }
+
+  /* Sheet Root Container */
+  [data-sheet-root] {
+    position: relative;
+  }
+
+  /* Sheet Overlay */
+  [data-sheet-role="overlay"] {
+    position: fixed;
+    inset: 0;
+    /* Ensure overlay is behind the panel even if --layer-* are missing */
+    z-index: var(--layer-4, 9990);
+    background-color: var(--sheet-overlay-bg);
+    
+    /* Remove backdrop blur to avoid muddy background and edge glow */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    opacity: 0;
+    transition: opacity var(--sheet-transition-duration) var(--sheet-transition-easing);
+    pointer-events: none;
+  }
+
+  /* Make open state robust to class or attribute targeting */
+  .sheet-overlay.open,
+  [data-sheet-role="overlay"].open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Sheet Content Panel */
+  [data-sheet-role="content"] {
+    position: fixed;
+    /* Panel always above overlay; provide fallback if tokens absent */
+    z-index: var(--layer-5, 9991);
+    /* Ensure fully opaque panel with robust fallbacks */
+    background-color: var(--sheet-bg);
+    color: var(--sheet-text);
+    box-shadow: var(--sheet-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    /* Ensure overlay backdrop effects don't bleed into panel */
+    isolation: isolate;
+    will-change: transform, opacity;
+    
+    /* Base transition properties */
+    transition: 
+      transform var(--sheet-transition-duration) var(--sheet-transition-easing),
+      opacity var(--sheet-transition-duration) var(--sheet-transition-easing);
+  }
+
+  /* Sheet positioning - Right side (default) */
+  [data-sheet-role="content"][data-sheet-side="right"] {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    width: var(--sheet-size-sm);
+    border-left: 1px solid var(--sheet-border);
+    transform: translateX(100%);
+    opacity: 0;
+    /* Explicitly set background to ensure it does not inherit gradients */
+    background: var(--sheet-bg);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="right"].open {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  /* Sheet positioning - Left side */
+  [data-sheet-role="content"][data-sheet-side="left"] {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    width: var(--sheet-size-sm);
+    border-right: 1px solid var(--sheet-border);
+    transform: translateX(-100%);
+    opacity: 0;
+    background: var(--sheet-bg);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="left"].open {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  /* Sheet positioning - Top */
+  [data-sheet-role="content"][data-sheet-side="top"] {
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: var(--sheet-size-sm);
+    border-bottom: 1px solid var(--sheet-border);
+    transform: translateY(-100%);
+    opacity: 0;
+    background: var(--sheet-bg);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="top"].open {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* Sheet positioning - Bottom */
+  [data-sheet-role="content"][data-sheet-side="bottom"] {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: var(--sheet-size-sm);
+    border-top: 1px solid var(--sheet-border);
+    transform: translateY(100%);
+    opacity: 0;
+    background: var(--sheet-bg);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="bottom"].open {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* Sheet sizes for horizontal sheets */
+  [data-sheet-role="content"][data-sheet-side="right"][data-sheet-size="sm"],
+  [data-sheet-role="content"][data-sheet-side="left"][data-sheet-size="sm"] {
+    width: var(--sheet-size-sm);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="right"][data-sheet-size="md"],
+  [data-sheet-role="content"][data-sheet-side="left"][data-sheet-size="md"] {
+    width: var(--sheet-size-md);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="right"][data-sheet-size="lg"],
+  [data-sheet-role="content"][data-sheet-side="left"][data-sheet-size="lg"] {
+    width: var(--sheet-size-lg);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="right"][data-sheet-size="xl"],
+  [data-sheet-role="content"][data-sheet-side="left"][data-sheet-size="xl"] {
+    width: var(--sheet-size-xl);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="right"][data-sheet-size="full"],
+  [data-sheet-role="content"][data-sheet-side="left"][data-sheet-size="full"] {
+    width: var(--sheet-size-full);
+  }
+
+  /* Sheet sizes for vertical sheets */
+  [data-sheet-role="content"][data-sheet-side="top"][data-sheet-size="sm"],
+  [data-sheet-role="content"][data-sheet-side="bottom"][data-sheet-size="sm"] {
+    height: var(--sheet-size-sm);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="top"][data-sheet-size="md"],
+  [data-sheet-role="content"][data-sheet-side="bottom"][data-sheet-size="md"] {
+    height: var(--sheet-size-md);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="top"][data-sheet-size="lg"],
+  [data-sheet-role="content"][data-sheet-side="bottom"][data-sheet-size="lg"] {
+    height: var(--sheet-size-lg);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="top"][data-sheet-size="xl"],
+  [data-sheet-role="content"][data-sheet-side="bottom"][data-sheet-size="xl"] {
+    height: var(--sheet-size-xl);
+  }
+
+  [data-sheet-role="content"][data-sheet-side="top"][data-sheet-size="full"],
+  [data-sheet-role="content"][data-sheet-side="bottom"][data-sheet-size="full"] {
+    height: var(--sheet-size-full);
+  }
+
+  /* Closed state - disable pointer events */
+  [data-sheet-role="content"].closed {
+    pointer-events: none;
+  }
+
+  /* Sheet Header */
+  [data-sheet-role="header"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2);
+    padding: var(--size-6);
+    border-bottom: 1px solid var(--sheet-border);
+  }
+
+  /* Sheet Title */
+  [data-sheet-role="title"] {
+    font-size: var(--font-size-3);
+    font-weight: var(--font-weight-6);
+    color: var(--text-color-1);
+    margin: 0;
+    line-height: var(--font-lineheight-2);
+  }
+
+  /* Sheet Description */
+  [data-sheet-role="description"] {
+    font-size: var(--font-size-1);
+    color: var(--text-color-2);
+    margin: 0;
+    line-height: var(--font-lineheight-3);
+  }
+
+  /* Sheet Footer */
+  [data-sheet-role="footer"] {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: var(--size-2);
+    padding: var(--size-6);
+    border-top: 1px solid var(--sheet-border);
+    margin-top: auto;
+  }
+
+  @media (min-width: 640px) {
+    [data-sheet-role="footer"] {
+      flex-direction: row;
+      justify-content: flex-end;
+    }
+  }
+
+  /* Sheet Close Button */
+  [data-sheet-role="close"] {
+    position: absolute;
+    top: var(--size-4);
+    right: var(--size-4);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--sheet-radius);
+    color: var(--text-color-2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-8);
+    height: var(--size-8);
+    opacity: 0.7;
+    transition: opacity 0.2s var(--ease-3);
+    z-index: 1;
+  }
+
+  [data-sheet-role="close"]:hover {
+    opacity: 1;
+    background-color: var(--surface-tonal);
+  }
+
+  [data-sheet-role="close"]:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  /* Close button specific styling */
+  .sheet-close-button {
+    position: absolute;
+    top: var(--size-4);
+    right: var(--size-4);
+  }
+
+  .sheet-close-icon {
+    font-size: var(--font-size-4);
+    font-weight: var(--font-weight-3);
+    line-height: 1;
+  }
+
+  /* Content area styling */
+  .sheet-body {
+    padding: var(--size-6);
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .sheet-body > * + * {
+    margin-top: var(--size-4);
+  }
+
+  /* Responsive behavior */
+  @media (max-width: 640px) {
+    [data-sheet-role="content"][data-sheet-side="right"],
+    [data-sheet-role="content"][data-sheet-side="left"] {
+      width: 100%;
+      max-width: none;
+    }
+    
+    [data-sheet-role="content"][data-sheet-side="top"],
+    [data-sheet-role="content"][data-sheet-side="bottom"] {
+      height: 80vh;
+      max-height: none;
+    }
+  }
+
+  /* Prevent body scroll when sheet is open */
+  body:has([data-sheet-root] .open) {
+    overflow: hidden;
+  }
+}

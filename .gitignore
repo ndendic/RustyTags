@@ -83,4 +83,5 @@ tests/
 # CLAUDE.md
 RustyMonsterUI/
 
-# notebooks
+# datastar
+datastar-inspector*

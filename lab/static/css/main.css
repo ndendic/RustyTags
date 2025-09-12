@@ -10,18 +10,13 @@ Ideally it's the root/entry CSS file in your project.
 @import "./theme.css";
 
 @layer theme {
-    h2 {
-        margin-block: var(--size-4);
-    }
-    html {
-        background-color: var(--gradient-16);
-    }
-
     .container {
+        h3 {
+            margin-block: var(--size-4);
+        }
         width: min(100% - 2rem, 50rem);
         margin-inline: auto;
-        background-color: var(--gradient-16);
         display: grid;
-        place-items: center;
+        place-items: start;
     }
 }

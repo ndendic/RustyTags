@@ -9,7 +9,7 @@
     scrollbar-width: thin;
   }
 
-  :where(html) {
+  :where(body) {
     --_page-bg-color: var(--surface-default);
 
     accent-color: var(--primary);
