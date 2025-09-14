@@ -13,7 +13,9 @@ def Page(*content,
          ftrs:Optional[tuple]=None, 
          htmlkw:Optional[dict]=None, 
          bodykw:Optional[dict]=None,
-         datastar:bool=True) -> HtmlString:
+         datastar:bool=True,
+         lucide:bool=False
+    ) -> HtmlString:
     """Base page layout with common HTML structure."""
     
     return Html(
@@ -21,9 +23,11 @@ def Page(*content,
             Title(title),
             *hdrs if hdrs else (),
             Script(src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js", type="module") if datastar else fragment,
+            Script(src="https://unpkg.com/lucide@latest") if lucide else fragment,
         ),
         Body(
-            *content,                
+            *content,             
+            Script("lucide.createIcons();") if lucide else fragment,
             *ftrs if ftrs else (),
             **bodykw if bodykw else {},
         ),
@@ -35,13 +39,14 @@ def create_template(page_title: str = "MyPage",
                     ftrs:Optional[tuple]=None, 
                     htmlkw:Optional[dict]=None, 
                     bodykw:Optional[dict]=None,
-                    datastar:bool=True):
+                    datastar:bool=True,
+                    lucide:bool=True):
     """Create a decorator that wraps content in a Page layout.
     
     Returns a decorator function that can be used to wrap view functions.
     The decorator will take the function's output and wrap it in the Page layout.
     """
-    page_func = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw, datastar=datastar)
+    page_func = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw, datastar=datastar, lucide=lucide)
     def page(title: str|None = None, wrap_in: Callable|None = None):
         def decorator(func: Callable[P, R]) -> Callable[P, R]:
             @wraps(func) 
@@ -54,13 +59,13 @@ def create_template(page_title: str = "MyPage",
         return decorator
     return page
 
-def page_template(page_title: str = "MyPage", hdrs:Optional[tuple]=None,ftrs:Optional[tuple]=None, htmlkw:Optional[dict]=None, bodykw:Optional[dict]=None):
+def page_template(page_title: str = "MyPage", hdrs:Optional[tuple]=None,ftrs:Optional[tuple]=None, htmlkw:Optional[dict]=None, bodykw:Optional[dict]=None, datastar:bool=True, lucide:bool=False):
     """Create a decorator that wraps content in a Page layout.
     
     Returns a decorator function that can be used to wrap view functions.
     The decorator will take the function's output and wrap it in the Page layout.
     """
-    template = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw, title=page_title)
+    template = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw, title=page_title, datastar=datastar, lucide=lucide)
     return template
 
 def show(html: HtmlString):

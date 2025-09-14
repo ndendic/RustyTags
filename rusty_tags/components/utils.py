@@ -1,7 +1,9 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Dict, Optional
+import uuid
 
 from rusty_tags import HtmlString, I, Script
+from rusty_tags.datastar import Signals
 
 
 def Icon(icon: str, **attrs) -> HtmlString:
@@ -69,3 +71,51 @@ def cva(base: str = "", config: dict[str, Any] | None = None) -> Callable[..., s
         return cn(*classes)
 
     return variant_function
+
+
+def generate_component_id(component_type: str, user_id: Optional[str] = None) -> str:
+    """Generate component ID following the pattern: user_id or {component_type}-{short_hash}"""
+    if user_id:
+        return user_id
+    
+    # Generate a short hash for uniqueness
+    short_hash = uuid.uuid4().hex[:6]
+    return f"{component_type}-{short_hash}"
+
+
+def create_component_signals(
+    component_id: str, 
+    default_signals: Dict[str, Any],
+    user_signals: Optional[Dict[str, Any]] = None,
+    expose_signals: bool = False
+) -> Dict[str, Any]:
+    """Create component signals with proper naming and visibility control.
+    
+    Args:
+        component_id: The component's ID
+        default_signals: Default signals for this component type
+        user_signals: User-provided signal overrides
+        expose_signals: Whether to make private signals public
+    
+    Returns:
+        Dict of signals ready for Datastar integration
+    """
+    if user_signals:
+        # User provided explicit signals - use exactly as provided
+        return user_signals
+    
+    # Generate signals based on component ID and defaults
+    signals = {}
+    for signal_name, default_value in default_signals.items():
+        # Check if signal should be private (starts with underscore in template)
+        if signal_name.startswith('_') and not expose_signals:
+            # Keep private by prefixing with underscore
+            final_name = f"_{component_id}{signal_name}"
+        else:
+            # Make public by removing leading underscore if present
+            base_name = signal_name.lstrip('_')
+            final_name = f"{component_id}_{base_name}"
+        
+        signals[final_name] = default_value
+    
+    return signals
