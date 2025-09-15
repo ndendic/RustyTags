@@ -14,3 +14,4 @@ def Icon(icon: str,
     else:
         attrs.update({"style": style_attrs})    
         return rt.I(icon, cls=cls, **attrs)
+        

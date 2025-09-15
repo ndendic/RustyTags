@@ -1,28 +1,195 @@
 # RustyTags Web Components Architecture Plan
 
 ## 🎯 **Vision**
-Create a **headless UI component library** for Python web development built on RustyTags' high-performance foundation with native Datastar reactivity. Components should be unstyled but provide core skeleton for interactive web components with excellent developer experience.
+Create a **headless UI component library** for Python web development built on RustyTags' high-performance foundation with native Datastar reactivity. Components focus on **complex anatomical patterns** and **behavioral interactions** that are hard to implement correctly, while leaving simple HTML elements to be used directly via RustyTags base tags.
+
+## 🧠 **Key Implementation Lessons Learned**
+
+### **Critical Pattern: Function Closures for Signal Sharing**
+**✅ DO**: Use function closures that return functions for clean composition:
+```python
+def TabsTrigger(*children, id: str, **attrs):
+    def create_trigger(signal: str, default_tab: str):
+        return rt.Button(
+            *children, 
+            on_click=f"${signal} = '{id}'",
+            **attrs
+        )
+    return create_trigger
+
+def Tabs(*children, default_tab: str, **attrs):
+    signal = f"tabs_{next(_tab_ids)}"
+    processed_children = [
+        child(signal, default_tab) if callable(child) else child
+        for child in children
+    ]
+    return rt.Div(*processed_children, signals=Signals(**{signal: default_tab}))
+```
+
+**❌ DON'T**: Create monolithic components with complex internal structure and signal management.
+
+### **Critical Pattern: Simple String-Based State**
+**✅ DO**: Use simple string identifiers for state management:
+```python
+# Simple and clear
+signals=Signals(active_tab="tab1")
+on_click=f"$active_tab = 'tab2'"
+show=f"$active_tab === 'tab1'"
+```
+
+**❌ DON'T**: Use complex nested dictionaries or numeric indices that are hard to work with.
+
+### **Critical Pattern: Datastar Reactive Attributes**
+**✅ DO**: Use `data-attr-*` for dynamic HTML attributes:
+```python
+**{
+    "aria-selected": "true" if is_active else f"${signal} === '{id}'",
+    "data-attr-aria-selected": f"${signal} === '{id}'",  # Updates dynamically
+    "data-attr-tabindex": f"${signal} === '{id}' ? '0' : '-1'"
+}
+```
+
+**❌ DON'T**: Try to manage complex conditional attributes without Datastar's reactive system.
+
+### **Critical Pattern: Component Composition Philosophy**
+**✅ DO**: Build components that solve **anatomical complexity**:
+- Multiple coordinated DOM elements
+- Complex ARIA relationships
+- State synchronization between parts
+- Focus management and keyboard navigation
+
+**❌ DON'T**: Wrap simple HTML elements just for styling - use `rt.Button()`, `rt.Input()` directly.
+
+### **Critical Pattern: Minimal API Surface**
+**✅ DO**: Keep component APIs focused and composable:
+```python
+# Clean, focused API
+Tabs(
+    TabsList(
+        TabsTrigger("Tab 1", id="tab1"),
+        TabsTrigger("Tab 2", id="tab2"),
+    ),
+    TabsContent(P("Content 1"), id="tab1"),
+    TabsContent(P("Content 2"), id="tab2"),
+    default_tab="tab1"
+)
+```
+
+**❌ DON'T**: Create overly complex APIs with too many configuration options.
+
+### **Critical Pattern: CSS Requirements**
+**✅ DO**: Accept that some components need minimal CSS for functionality:
+- Positioning for popovers/dropdowns
+- Show/hide states
+- Focus management
+- Transitions and animations
+
+**❌ DON'T**: Try to make everything work with zero CSS when positioning/layout is required.
+
+---
 
 ## 🏗️ **Core Architecture Decisions**
 
-### **Component Structure Philosophy**
-- **Primary**: Flat structure wherever possible for performance
-- **Exception**: Use hierarchical structure only when justified by our criteria
-- **Decision Framework** (in priority order):
-  1. **Customization complexity** (primary) - Keep APIs simple, "less is more"
-  2. **Reusability** (secondary) - Sub-components useful standalone
-  3. **State interdependence** (tertiary) - Complex shared state needs
+### **Component Philosophy: Anatomical Patterns Over Element Wrapping**
 
-### **Component Structure Examples**
+**What We Build:**
+- **Complex anatomical patterns** requiring multiple coordinated DOM elements
+- **Behavioral interactions** with non-trivial state management
+- **Accessibility-heavy patterns** that developers often get wrong
+- **Form composition patterns** that require proper element relationships
+
+**What We Don't Build:**
+- Simple element wrappers (use `rt.Button`, `rt.Input`, etc. directly)
+- Pure styling components (use CSS/Tailwind/Open Props)
+- Basic layout elements (use native HTML + CSS)
+
+**Decision Framework** (ALL must be true):
+1. **Anatomical complexity**: Requires multiple coordinated DOM elements
+2. **Behavioral complexity**: Non-trivial interaction patterns or state management
+3. **Accessibility burden**: Significant ARIA requirements or focus management
+4. **Developer pain point**: Commonly implemented incorrectly or tediously
+
+### **Component Examples**
 ```python
-# Simple components (clearly flat)
-Button(), Input(), Badge()
+# ❌ Don't build - use base tags directly
+rt.Button("Click me", cls="my-styles", on_click="$clicked = true")
+rt.Input(type="email", placeholder="Email", cls="my-input-styles")
 
-# Medium complexity (decide per component)  
-Dropdown(), Tabs(), Accordion()
+# ✅ Build - complex anatomical patterns
+Dropdown(
+    trigger=rt.Button("Options"),
+    items=[DropdownItem("Edit"), DropdownItem("Delete")]
+)
 
-# Complex components (might benefit from hierarchy)
-DataTable(), Form(), Modal()
+FormField(
+    label="Email",
+    input=rt.Input(type="email"),
+    error_message="$emailError"
+)
+```
+
+## 🧬 **Anatomical Pattern Philosophy**
+
+### **What Makes a Good Component Candidate**
+
+A component should solve **structural complexity** and **behavioral coordination** problems:
+
+**✅ Good candidates:**
+- **Multiple DOM elements** that need to work together
+- **Complex ARIA relationships** between elements  
+- **State coordination** between multiple interactive parts
+- **Positioning logic** for popups, dropdowns, tooltips
+- **Focus management** and keyboard navigation patterns
+- **Event coordination** (click-outside, ESC handling, etc.)
+
+**❌ Poor candidates:**
+- Single DOM elements with just styling differences
+- Pure layout/presentation components
+- Simple event handlers that can be added directly
+
+### **Component Composition Strategy**
+
+**Accept base elements as parameters:**
+```python
+# Let users provide their own styled elements
+FormField(
+    label="Email Address",
+    input=rt.Input(type="email", cls="my-custom-input-styles"),
+    help_text="We'll never share this"
+)
+
+Dropdown(
+    trigger=rt.Button("My Styled Button", cls="custom-btn"),
+    items=[...]
+)
+```
+
+**Focus on the structural relationships:**
+```python
+# The component handles the complex parts:
+# - Label/input associations
+# - Error state management  
+# - ARIA attributes
+# - Validation state coordination
+def FormField(label, input, error_message=None, help_text=None, **attrs):
+    field_id = generate_component_id("form-field")
+    input_id = f"{field_id}-input"
+    error_id = f"{field_id}-error"
+    help_id = f"{field_id}-help"
+    
+    # Add proper IDs and ARIA to the user's input element
+    enhanced_input = input.copy_with(
+        id=input_id,
+        **{"aria-describedby": f"{help_id} {error_id}" if error_message else help_id}
+    )
+    
+    return rt.Div(
+        rt.Label(label, for_=input_id),
+        enhanced_input,
+        rt.Div(help_text, id=help_id, cls="help-text") if help_text else "",
+        rt.Div(error_message, id=error_id, cls="error-text", role="alert") if error_message else "",
+        **attrs
+    )
 ```
 
 ## 🔄 **State Management Strategy**
@@ -164,37 +331,35 @@ Input("email", placeholder="Email")
 ```
 
 ### **Component Priority** ✅
-**Decision: Prioritize Functional/Behavioral Components Over Styling-Only Components**
+**Decision: Focus on Complex Anatomical Patterns and Behavioral Interactions**
 
-**Tier 1 - Core Interactive Elements (MVP):**
-- `Button` - Click interactions, loading states, disabled states
-- `Input` - Text, email, password with validation states
-- `Toggle` - Boolean switches with state management
-- `Checkbox` - Multi-select with intermediate states
-- `RadioGroup` - Single-select groups with state coordination
-- `Select` - Dropdown selection with search/filtering
-- `TextArea` - Multi-line text input with auto-resize
-- `SearchInput` - Search with debouncing, clear actions
+**Tier 1 - Complex Anatomical Patterns (MVP):**
+- `Dropdown/Select` - Trigger + positioned menu + option selection + keyboard nav + click-outside
+- `Modal/Dialog` - Backdrop + content + focus trap + ESC handling + scroll lock
+- `FormField` - Label + input + error + help text with proper associations and validation states
+- `RadioGroup` - Multiple radio inputs with grouping, labels, and state coordination
+- `Tabs` - Tab buttons + panels + ARIA relationships + keyboard navigation
+- `Accordion` - Headers + collapsible content + proper ARIA states
 
-**Tier 2 - Advanced Interactions:**
-- `Modal` - Focus trap, backdrop, ESC handling
-- `Popover` - Positioning, click-outside, arrow placement
-- `Tooltip` - Hover/focus triggers, positioning
-- `Dropdown` - Menu positioning, keyboard navigation
-- `DatePicker` - Calendar interaction, date validation
-- `Slider` - Range selection, step controls
-- `Tabs` - Tab switching, keyboard navigation
-- `Accordion` - Expand/collapse with smooth transitions
+**Tier 2 - Advanced Interactive Patterns:**
+- `Combobox/Autocomplete` - Input + dropdown + filtering + selection + async search + keyboard nav
+- `DatePicker` - Input + calendar popup + date selection + validation + positioning
+- `Toggle/Switch` - Custom styled checkbox with proper ARIA and animation states
+- `CheckboxGroup` - Multiple checkboxes with group validation and state management
+- `Popover` - Trigger + positioned content + click-outside + arrow placement
+- `Tooltip` - Hover/focus triggers + positioned content + timing controls
 
-**Tier 3 - Complex Components:**
-- `Form` - Validation orchestration, submission handling
-- `DataTable` - Sorting, filtering, pagination
-- `Autocomplete` - Async search, result navigation
-- `FileUpload` - Drag-drop, progress, preview
+**Tier 3 - Complex Composition Patterns:**
+- `DataTable` - Headers + sortable columns + filtering + pagination + row selection
+- `Form` - Form wrapper with validation orchestration and submission handling
+- `Slider/Range` - Custom range input with multiple handles, labels, formatting
+- `Pagination` - Page numbers + prev/next + jump-to with proper navigation
+- `FileUpload` - Drag-drop area + progress + preview + validation
 
-**Deprioritized (Pure Layout/Styling):**
-- Cards, Grids, Containers, Spacers, Dividers
-- These can be easily created with basic HTML tags + CSS
+**Not Component-ized (Use Base Tags + CSS):**
+- `Button`, `Input`, `Link` - Use `rt.Button()`, `rt.Input()`, `rt.A()` directly
+- Cards, Grids, Containers, Spacers, Dividers - Use native HTML + CSS
+- Badges, Avatars, Icons - Simple styling, no complex behavior
 
 ### **Package Structure** ✅
 **Decision: RustyTags Extension Module - Single Flat Structure**
@@ -266,22 +431,23 @@ def home(request):
 6. ✅ Set package structure (flat extension module)
 7. ✅ Framework integration strategy (universal)
 
-### **Phase 2: MVP Components** (Next)
-1. 🔄 Create component base class/utilities
-2. 🔄 Implement Tier 1 components:
-   - Button (click interactions, loading states)
-   - Input (validation states, types)
-   - Toggle (boolean switches)
-   - Checkbox (multi-select, intermediate states)
-3. 🔄 Establish styling patterns and variant system
-4. 🔄 Implement automatic accessibility features
-5. 🔄 Create comprehensive tests
+### **Phase 2: MVP Anatomical Patterns** (Next)
+1. ✅ Create component base utilities for ID generation, signals, and styling
+2. 🔄 Implement Tier 1 anatomical patterns:
+   - FormField (label + input + error + help text associations)
+   - Dropdown/Select (trigger + menu + options + positioning + keyboard nav)
+   - Modal/Dialog (backdrop + content + focus trap + ESC + scroll lock)
+   - RadioGroup (grouped radio inputs + labels + state coordination)
+3. 🔄 Establish anatomical pattern templates and composition helpers
+4. 🔄 Implement automatic accessibility for complex patterns
+5. 🔄 Create comprehensive demos and tests
+6. 🔄 Document pattern usage and customization
 
-### **Phase 3: Advanced Components** (Future)
-1. ⏳ Tier 2 components (Modal, Popover, Dropdown, etc.)
-2. ⏳ Complex positioning and interaction patterns
-3. ⏳ Advanced Datastar integration patterns
-4. ⏳ Performance optimization and caching
+### **Phase 3: Advanced Interactive Patterns** (Future)
+1. ⏳ Tier 2 interactive patterns (Combobox, DatePicker, Toggle, CheckboxGroup, etc.)
+2. ⏳ Advanced positioning and popup management (Popover, Tooltip)
+3. ⏳ Complex Datastar integration patterns for async interactions
+4. ⏳ Performance optimization for complex DOM manipulations
 
 ### **Phase 4: Ecosystem** (Future)
 1. ⏳ Documentation and examples

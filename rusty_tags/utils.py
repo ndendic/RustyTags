@@ -18,16 +18,22 @@ HEADER_URLS = {
 
 
 def Page(*content, 
-         title: str = "StarModel", 
-         hdrs:Optional[tuple]=None,
-         ftrs:Optional[tuple]=None, 
-         htmlkw:Optional[dict]=None, 
-         bodykw:Optional[dict]=None,
+         title: str = "RustyTags", 
+         hdrs:tuple=None,
+         ftrs:tuple=None, 
+         htmlkw:dict=None, 
+         bodykw:dict=None,
          datastar:bool=True,
          lucide:bool=False,
          highlightjs:bool=False
     ) -> HtmlString:
     """Base page layout with common HTML structure."""
+    # initialize empty tuple if None
+    hdrs = hdrs if hdrs is not None else ()
+    ftrs = ftrs if ftrs is not None else ()
+    htmlkw = htmlkw if htmlkw is not None else {}
+    bodykw = bodykw if bodykw is not None else {}
+
     if highlightjs:
             hdrs += (   # pyright: ignore[reportOperatorIssue]
                 Script(src=HEADER_URLS['highlight_js']),
@@ -56,23 +62,24 @@ def Page(*content,
                     hljs.highlightAll();
                 ''', type='module'),
             )
-    
+            ftrs += (Script("hljs.highlightAll();"),) 
+    if lucide:
+        hdrs += (Script(src="https://unpkg.com/lucide@latest"),)
+        ftrs += (Script("lucide.createIcons();"),)
+
     return Html(
         Head(
             Title(title),
             *hdrs if hdrs else (),
             Script(src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js", type="module") if datastar else fragment,
-            Script(src="https://unpkg.com/lucide@latest") if lucide else fragment,
         ),
         Body(
             *content,             
-            Script("lucide.createIcons();") if lucide else fragment,
             *ftrs if ftrs else (),
             **bodykw if bodykw else {},
         ),
         **htmlkw if htmlkw else {},
     )
-
 def create_template(page_title: str = "MyPage", 
                     hdrs:Optional[tuple]=None,
                     ftrs:Optional[tuple]=None, 

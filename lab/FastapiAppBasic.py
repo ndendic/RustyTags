@@ -7,9 +7,8 @@ from rusty_tags.datastar import Signals, DS
 from rusty_tags.events import event, emit_async, on, ANY
 from rusty_tags.client import Client
 from rusty_tags.starlette import *
-from rusty_tags.components import Button, Icon
 
-from rusty_tags.components.utils import cn
+from rusty_tags.xtras.utils import cn
 from datastar_py.fastapi import  ReadSignals
 from datastar_py.consts import ElementPatchMode
 from uuid import uuid4
@@ -95,100 +94,9 @@ def index():
                 ),
             ),
             
-            Section("Component Demos",
-                P("Test the RustyTags components:"),
-                Ul(
-                    Li(A("Button Component Demo", href="/components/button", cls="color-blue-6 text-decoration-underline")),
-                ),
-            ),
             
             signals=Signals(message=""),
         )
-
-@app.get("/components/button")
-@page(title="Button Component Demo", wrap_in=HTMLResponse)
-def button_demo():
-    return Main(
-        H1("Button Component Demo"),
-        P("Testing the Button component with different styles and interactions."),
-        
-        Section("Basic Buttons",
-            P("Plain buttons without styling:"),
-            Div(
-                Button(Icon("home", lucide_width="24", lucide_height="24"), "Basic Button"),
-                " ",
-                Button("Disabled Button", disabled=True),
-                " ",
-                Button("Submit Button", type="submit"),
-                cls="flex gap-2 flex-wrap"
-            ),
-            CodeBlock("""
-Div(
-    Button(Icon("home"), "Basic Button"),
-    " ",
-    Button("Disabled Button", disabled=True),
-    " ",
-    Button("Submit Button", type="submit"),
-    cls="flex gap-2 flex-wrap"
-)
-            """, code_cls="language-python")
-        ),
-        
-        Section("Open Props Styled Buttons",
-            P("Using Open Props classes for styling:"),
-            Div(
-                Button("Primary", cls="surface-1 px-3 py-2 border-radius-2 font-weight-6 color-0 bg-blue-6 border-0 cursor-pointer transition"),
-                " ",
-                Button("Secondary", cls="surface-1 px-3 py-2 border-radius-2 font-weight-6 color-0 bg-gray-6 border-0 cursor-pointer transition"),
-                " ",
-                Button("Success", cls="surface-1 px-3 py-2 border-radius-2 font-weight-6 color-0 bg-green-6 border-0 cursor-pointer transition"),
-                " ",
-                Button("Danger", cls="surface-1 px-3 py-2 border-radius-2 font-weight-6 color-0 bg-red-6 border-0 cursor-pointer transition"),
-                cls="flex gap-2 flex-wrap"
-            ),
-        ),
-        
-        Section("Interactive Buttons with Datastar",
-            P("Buttons that interact with Datastar signals:"),
-            Div(
-                Button("Click Me!", 
-                       on_click="$message = 'Button was clicked!'",
-                       cls="surface-1 px-4 py-2 border-radius-2 font-weight-6 color-0 bg-blue-6 border-0 cursor-pointer transition"),
-                " ",
-                Button("Reset Message", 
-                       on_click="$message = ''",
-                       cls="surface-1 px-4 py-2 border-radius-2 font-weight-6 color-0 bg-gray-6 border-0 cursor-pointer transition"),
-                cls="flex gap-2"
-            ),
-            Div(
-                P("Message: ", Span("$message", cls="font-weight-6")),
-                cls="mt-4 p-3 border-radius-2 surface-2"
-            ),
-        ),
-        
-        Section("Form Buttons",
-            P("Different button types for forms:"),
-            Form(
-                Div(
-                    Button("Submit Form", type="submit", cls="surface-1 px-4 py-2 border-radius-2 font-weight-6 color-0 bg-green-6 border-0 cursor-pointer"),
-                    " ",
-                    Button("Reset Form", type="reset", cls="surface-1 px-4 py-2 border-radius-2 font-weight-6 color-0 bg-orange-6 border-0 cursor-pointer"),
-                    " ",
-                    Button("Cancel", type="button", cls="surface-1 px-4 py-2 border-radius-2 font-weight-6 color-0 bg-gray-6 border-0 cursor-pointer"),
-                    cls="flex gap-2"
-                ),
-                cls="mt-2"
-            ),
-        ),
-        
-        Div(
-            A("← Back to Home", href="/", cls="color-blue-6 text-decoration-underline"),
-            cls="mt-8"
-        ),
-        
-        signals=Signals(message=""),
-    )
-
 
 @app.get("/cmds/{command}/{sender}")
 @datastar_response
