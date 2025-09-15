@@ -8,32 +8,53 @@ from rusty_tags.events import event, emit_async, on, ANY
 from rusty_tags.client import Client
 from rusty_tags.starlette import *
 from rusty_tags.components import Button, Icon
+
+from rusty_tags.components.utils import cn
 from datastar_py.fastapi import  ReadSignals
 from datastar_py.consts import ElementPatchMode
 from uuid import uuid4
 from typing import Any
+from enum import Enum
 
-hdrs = (Link(rel='stylesheet', href='https://unpkg.com/open-props'),
+HEADER_URLS = {
+        'franken_css': "https://cdn.jsdelivr.net/npm/franken-ui@2.0.0/dist/css/core.min.css",
+        'franken_js_core': "https://cdn.jsdelivr.net/npm/franken-ui@2.0.0/dist/js/core.iife.js",
+        'franken_icons': "https://cdn.jsdelivr.net/npm/franken-ui@2.0.0/dist/js/icon.iife.js",
+        'tailwind': "https://cdn.tailwindcss.com/3.4.16",
+        'daisyui': "https://cdn.jsdelivr.net/npm/daisyui@4.12.24/dist/full.min.css",
+        'apex_charts': "https://cdn.jsdelivr.net/npm/franken-ui@2.0.0/dist/js/chart.iife.js"
+}
+
+hdrs = (
+    # Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/css/core.min.css'),
+    # Link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/css/utilities.min.css'),
+    # Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/core.iife.js', type='module'),
+    # Script(src='https://cdn.jsdelivr.net/npm/franken-ui@2.1.0-next.18/dist/js/icon.iife.js', type='module'),
+
+    Link(rel='stylesheet', href='https://unpkg.com/open-props'),
     # Link(rel='stylesheet', href='https://unpkg.com/open-props/normalize.min.css'),
-    Link(rel='stylesheet', href='https://unpkg.com/open-props/buttons.min.css'),
     Style("""
-    html {
-        background: light-dark(var(--gradient-5), var(--gradient-16));
-        min-height: 100vh;
-        color: light-dark(var(--gray-9), var(--gray-1));
-        font-family: var(--font-geometric-humanist);
-        font-size: var(--font-size-3);
-    }
-    main {
-        width: min(100% - 2rem, 50rem);
-        margin-inline: auto;
-    }
-    """)
+
+        html {
+            background: light-dark(var(--gradient-5), var(--gradient-16));
+            min-height: 100vh;
+            color: light-dark(var(--gray-9), var(--gray-1));
+            font-family: var(--font-geometric-humanist);
+            font-size: var(--font-size-1);
+        }
+        main {
+            width: min(100% - 2rem, 50rem);
+            margin-inline: auto;
+        }
+    """),
 )
 htmlkws = dict(lang="en")
 bodykws = dict(signals=Signals(message="", conn=""))
-page = create_template(hdrs=hdrs, htmlkw=htmlkws, bodykw=bodykws)
-
+page = create_template(hdrs=hdrs, htmlkw=htmlkws, bodykw=bodykws, highlightjs=True)
+ftrs=(
+    Script("hljs.highlightAll();"),
+    Script("lucide.createIcons();"),
+)
 app = FastAPI()
 
 def Section(title, *content):
@@ -42,6 +63,18 @@ def Section(title, *content):
         *content,
         cls="fluid-flex"
     )
+def CodeBlock(*c: str, # Contents of Code tag (often text)
+              cls: Enum | str | tuple = (), # Classes for the outer container
+              code_cls: Enum | str | tuple = (), # Classes for the code tag
+              **kwargs # Additional args for Code tag
+              ) -> HtmlString: # Div(Pre(Code(..., cls='uk-codeblock), cls='multiple tailwind styles'), cls='uk-block')
+    "CodeBlock with Styling"
+    return Div(
+        Pre(Code(*c, cls=cn(code_cls), **kwargs),
+            # cls=cn((f'bg-gray-100 dark:bg-gray-800 {TextT.gray} p-0.4 rounded text-sm font-mono'))
+            ),
+#             cls=('bg-gray-100 dark:bg-gray-800 dark:text-gray-200 p-0.4 rounded text-sm font-mono')),
+        cls=cn(cls))
 
 @app.get("/")
 @page(title="FastAPI App", wrap_in=HTMLResponse)
@@ -72,7 +105,6 @@ def index():
             signals=Signals(message=""),
         )
 
-
 @app.get("/components/button")
 @page(title="Button Component Demo", wrap_in=HTMLResponse)
 def button_demo():
@@ -83,13 +115,23 @@ def button_demo():
         Section("Basic Buttons",
             P("Plain buttons without styling:"),
             Div(
-                Button(Icon("home"), "Basic Button"),
+                Button(Icon("home", lucide_width="24", lucide_height="24"), "Basic Button"),
                 " ",
                 Button("Disabled Button", disabled=True),
                 " ",
                 Button("Submit Button", type="submit"),
                 cls="flex gap-2 flex-wrap"
             ),
+            CodeBlock("""
+Div(
+    Button(Icon("home"), "Basic Button"),
+    " ",
+    Button("Disabled Button", disabled=True),
+    " ",
+    Button("Submit Button", type="submit"),
+    cls="flex gap-2 flex-wrap"
+)
+            """, code_cls="language-python")
         ),
         
         Section("Open Props Styled Buttons",
@@ -119,7 +161,7 @@ def button_demo():
                 cls="flex gap-2"
             ),
             Div(
-                P(f"Message: ", Span("$message", cls="font-weight-6")),
+                P("Message: ", Span("$message", cls="font-weight-6")),
                 cls="mt-4 p-3 border-radius-2 surface-2"
             ),
         ),
@@ -152,7 +194,7 @@ def button_demo():
 @datastar_response
 async def commands(command: str, sender: str, request: Request, signals: ReadSignals):
     """Trigger events and broadcast to all connected clients"""
-    signals = Signals(signals) if signals else {}
+    signals = Signals(**signals) if signals else {}
     backend_signal = event(command)
     await emit_async(backend_signal, sender, signals=signals, request=request)
 
@@ -170,7 +212,7 @@ async def notify(sender, request: Request, signals: Signals):
     yield sse_elements(Div(f"Server processed message: {message}", cls="text-lg text-bold mt-4 mt-2"),
                              selector="#updates", mode=ElementPatchMode.APPEND, topic="updates")
     yield sse_signals({"message": ""}, topic="updates")
-    yield Notification(f"Server notification: {message}")
+    # yield Notification(f"Server notification: {message}")
 
 if __name__ == "__main__":
     import uvicorn

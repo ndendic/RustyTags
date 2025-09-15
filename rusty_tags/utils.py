@@ -1,11 +1,21 @@
 from typing import Optional, Callable, ParamSpec, TypeVar
 from functools import partial, wraps
-from .rusty_tags import Html, Head, Title, Body, HtmlString, Script, CustomTag
+from .rusty_tags import Html, Head, Title, Body, HtmlString, Script, CustomTag, Link
 
 P = ParamSpec("P")
 R = TypeVar("R")
 
 fragment = CustomTag("Fragment")
+
+HEADER_URLS = {        
+        'highlight_js': "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js",
+        'highlight_python': "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/languages/python.min.js",
+        'highlight_light_css': "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-light.css",
+        'highlight_dark_css': "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.css",
+        'highlight_copy': "https://cdn.jsdelivr.net/gh/arronhunt/highlightjs-copy/dist/highlightjs-copy.min.js",
+        'highlight_copy_css': "https://cdn.jsdelivr.net/gh/arronhunt/highlightjs-copy/dist/highlightjs-copy.min.css",
+}
+
 
 def Page(*content, 
          title: str = "StarModel", 
@@ -14,9 +24,38 @@ def Page(*content,
          htmlkw:Optional[dict]=None, 
          bodykw:Optional[dict]=None,
          datastar:bool=True,
-         lucide:bool=False
+         lucide:bool=False,
+         highlightjs:bool=False
     ) -> HtmlString:
     """Base page layout with common HTML structure."""
+    if highlightjs:
+            hdrs += (   # pyright: ignore[reportOperatorIssue]
+                Script(src=HEADER_URLS['highlight_js']),
+                Script(src=HEADER_URLS['highlight_python']),
+                Link(rel="stylesheet", href=HEADER_URLS['highlight_light_css'], id='hljs-light'),
+                Link(rel="stylesheet", href=HEADER_URLS['highlight_dark_css'], id='hljs-dark'),
+                Script(src=HEADER_URLS['highlight_copy']),
+                Link(rel="stylesheet", href=HEADER_URLS['highlight_copy_css']),
+                Script('''
+                    hljs.addPlugin(new CopyButtonPlugin());
+                    hljs.configure({
+                        cssSelector: 'pre code',
+                        languages: ['python'],
+                        ignoreUnescapedHTML: true
+                    });
+                    function updateTheme() {
+                        const isDark = document.documentElement.classList.contains('dark');
+                        document.getElementById('hljs-dark').disabled = !isDark;
+                        document.getElementById('hljs-light').disabled = isDark;
+                    }
+                    new MutationObserver(mutations =>
+                        mutations.forEach(m => m.target.tagName === 'HTML' &&
+                            m.attributeName === 'class' && updateTheme())
+                    ).observe(document.documentElement, { attributes: true });
+                    updateTheme();
+                    hljs.highlightAll();
+                ''', type='module'),
+            )
     
     return Html(
         Head(
@@ -40,13 +79,15 @@ def create_template(page_title: str = "MyPage",
                     htmlkw:Optional[dict]=None, 
                     bodykw:Optional[dict]=None,
                     datastar:bool=True,
-                    lucide:bool=True):
+                    lucide:bool=True,
+                    highlightjs:bool=False
+                    ):
     """Create a decorator that wraps content in a Page layout.
     
     Returns a decorator function that can be used to wrap view functions.
     The decorator will take the function's output and wrap it in the Page layout.
     """
-    page_func = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw, datastar=datastar, lucide=lucide)
+    page_func = partial(Page, hdrs=hdrs, ftrs=ftrs, htmlkw=htmlkw, bodykw=bodykw, datastar=datastar, lucide=lucide, highlightjs=highlightjs)
     def page(title: str|None = None, wrap_in: Callable|None = None):
         def decorator(func: Callable[P, R]) -> Callable[P, R]:
             @wraps(func) 
