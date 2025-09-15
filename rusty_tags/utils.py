@@ -107,7 +107,16 @@ def create_template(page_title: str = "MyPage",
         return decorator
     return page
 
-def page_template(page_title: str = "MyPage", hdrs:Optional[tuple]=None,ftrs:Optional[tuple]=None, htmlkw:Optional[dict]=None, bodykw:Optional[dict]=None, datastar:bool=True, lucide:bool=False):
+def page_template(
+    page_title: str = "MyPage", 
+    hdrs:Optional[tuple]=None,
+    ftrs:Optional[tuple]=None, 
+    htmlkw:Optional[dict]=None, 
+    bodykw:Optional[dict]=None, 
+    datastar:bool=True, 
+    lucide:bool=False,
+    highlightjs:bool=False
+):
     """Create a decorator that wraps content in a Page layout.
     
     Returns a decorator function that can be used to wrap view functions.
