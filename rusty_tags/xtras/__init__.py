@@ -5,5 +5,5 @@ from .utils import cva, cn
 from .inputs import *
 from .codeblock import CodeBlock
 from .tabs import Tabs, TabsList, TabsTrigger, TabsContent
-from .accordion import Accordion, AccordionItem, AccordionTrigger, AccordionContent
-from .icons import Icon
+from .accordion import Accordion, AccordionItem
+from .icons import LucideIcon

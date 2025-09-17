@@ -1,63 +1,91 @@
 import marimo
 
 __generated_with = "0.15.5"
-app = marimo.App(width="medium")
+app = marimo.App(
+    width="columns",
+    layout_file="layouts/molab.slides.json",
+    css_file="",
+)
 
-
-@app.cell
-def _():
+with app.setup(hide_code=True):
     import marimo as mo
     import rusty_tags as rt
-    return mo, rt
-
-
-@app.cell
-def _(rt):
-    rt.Div("Hello from Marimo!", rt.Button("click me!", cls="border rounded rounded-xl hover:cursor-pointer") , cls="grid text-2xl")
-    return
-
-
-app._unparsable_cell(
-    r"""
     from rusty_tags.utils import create_template, page_template
     from rusty_tags.datastar import Signals
 
     hdrs = (
         rt.Link(rel='stylesheet', href='https://unpkg.com/open-props'),
-        # Link(rel='stylesheet', href='https://unpkg.com/open-props/normalize.min.css'),
-        rt.Style(f\"\"\"
-            html {{
-                background: light-dark(var(--gradient-5), var(--gradient-16));
-                min-height: 100vh;
-                color: light-dark(var(--gray-9), var(--gray-1));
+        rt.Link(rel='stylesheet', href='https://unpkg.com/open-props/normalize.min.css'),
+        rt.Style("""
+            html {
                 font-family: var(--font-geometric-humanist);
+                backroung-color: #EFD49F
                 font-size: var(--font-size-1);
-            }}
-            main {{
+            }
+            main {
                 width: min(100% - 2rem, 40rem);
                 margin-inline: auto;
-            }}
-        
-            /* RustyTags Xtras CSS */
-        \"\"\"),
+            }
+
+        """),
     )
-    htmlkws = dict(lang=\"en\")
-    bodykws = dict(signals=Signals(message=\"\", conn=\"\"))
+    htmlkws = dict(lang="en")
+    bodykws = dict(signals=Signals(message="", conn=""))
     template = create_template(hdrs=hdrs, htmlkw=htmlkws, bodykw=bodykws, highlightjs=True)
     page = page_template(hdrs=hdrs, htmlkw=htmlkws, bodykw=bodykws, highlightjs=True)
 
-    # mo.iframe(page(rt.H1(\"Nikola was here\")).render(),height=100, width=300)
-    mo.Html(rt.H1(\"Nikola was here\").render())
-    mo.iframe(\"www.google.com\",with=\"100%\", hight=\"500px\")
 
-    """,
-    name="_"
-)
+@app.function
+def show(comp:str, width="100%",height="400px"):
+    return mo.iframe(str(page(comp)), width=width,height=height)
 
 
 @app.cell
-def _(mo):
-    mo.iframe("<h1>This is an iframe with pure HTML content!</h1><p>It's rendered directly from a string.</p>")
+def _():
+    sigs = rt.Signals(message="Hello ", name="Nikola")
+
+    myComp = rt.Div(
+            rt.H2("Demo APP!"),
+            rt.Input(bind="message"),
+            rt.Input(bind="name"),
+            rt.P("Hello from Marimo!", text="$message + $name"),
+            style="display: grid; gap: 1rem; width: min(100% - 2rem, 20rem); margin-inline: auto;",
+            signals = sigs
+        )
+    return (myComp,)
+
+
+@app.cell
+def _(myComp):
+    show(myComp)
+    return
+
+
+@app.cell(column=1)
+def _():
+    show(
+        rt.Div(
+            rt.Details(rt.Summary("Click me"), "For real?", name="1"), 
+            rt.Details(rt.Summary("Here!"), "For real?", name="1"), 
+            rt.Details(rt.Summary("Really?"), "For real?", name="1")
+        )
+    )
+    return
+
+
+@app.cell
+def _():
+    import inspect
+
+    def printer(
+        txt="Default" # Some default text, description="A description of the text parameter"
+    ):
+        print(txt)
+
+    # print the code of the printer def
+    source_lines = inspect.getsource(printer).split('\n')
+    print('\n'.join(source_lines))
+
     return
 
 

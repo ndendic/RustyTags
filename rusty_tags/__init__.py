@@ -4,6 +4,7 @@ from .utils import Page, create_template, page_template, show, AttrDict
 from .client import Client
 from .events import *
 from .datastar import *
+
 """
 RustyTags - High-performance HTML generation library
 
@@ -102,11 +103,11 @@ __all__ = [
     "Event",
     # Datastar
     'DS',
-    'signals', 
+    'signals',
     'Signals',
     'reactive_class',
     'attribute_generator',
     'SSE',
     'ElementPatchMode',
-    'EventType'
+    'EventType',
 ]

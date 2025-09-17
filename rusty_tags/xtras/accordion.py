@@ -1,68 +1,57 @@
-from typing import Any, Literal
-from itertools import count
+from typing import Any, Optional
 import rusty_tags as rt
-from .utils import cn, Icon
-from rusty_tags.datastar import Signals
-
-_accordion_ids = count(1)
+from .utils import cn
 
 
 def Accordion(
     *children,
-    type: Literal["single", "multiple"] = "single",
-    signal: str = "",
+    name: Optional[str] = None,
     cls: str = "",
     **attrs: Any,
 ) -> rt.HtmlString:
     """
-    Accordion anatomical pattern with expand/collapse coordination.
-    
-    This component handles complex coordination between:
-    - Multiple accordion items with proper state management
-    - Single vs multiple open item modes
-    - ARIA attributes for accessibility
-    - Smooth expand/collapse animations
+    Simple accordion container. When `name` is provided, only one child
+    AccordionItem with that name can be open at a time (native HTML behavior).
     
     Args:
-        *children: AccordionItem function components
-        type: "single" (one item open) or "multiple" (multiple items open)
-        signal: Signal name for accordion state (auto-generated if not provided)
+        *children: AccordionItem components or raw HTML
+        name: Shared name for accordion items (enables single-open behavior)
         cls: CSS classes for root container
         **attrs: Additional HTML attributes
         
     Returns:
-        Complete accordion structure with proper coordination
+        Section containing accordion items
         
-    Example:
+    Examples:
+        # Multiple items can be open
         Accordion(
-            AccordionItem(
-                "What is this?", 
-                P("This is an accordion item."),
-                id="item1"
-            ),
-            AccordionItem(
-                "How does it work?", 
-                P("It uses Datastar for state management."),
-                id="item2"
-            ),
-            type="single"
+            AccordionItem("Question 1", P("Answer 1")),
+            AccordionItem("Question 2", P("Answer 2"))
+        )
+        
+        # Only one item can be open at a time
+        Accordion(
+            AccordionItem("Question 1", P("Answer 1"), name="faq"),
+            AccordionItem("Question 2", P("Answer 2"), name="faq"),
+            name="faq"
         )
     """
-    if not signal:
-        signal = f"accordion_{next(_accordion_ids)}"
-    
-    # Process children by calling them with the signal context
-    processed_children = [
-        child(signal, type) if callable(child) else child
-        for child in children
-    ]
+    # If accordion has a name, apply it to children that don't have one
+    if name:
+        processed_children = []
+        for child in children:
+            # If child is AccordionItem without name, add the accordion name
+            if (hasattr(child, 'tag') and child.tag == 'details' and 
+                'name' not in child.attrs):
+                child_copy = rt.Details(*child.children, **child.attrs, name=name)
+                processed_children.append(child_copy)
+            else:
+                processed_children.append(child)
+        children = processed_children
     
     return rt.Section(
-        *processed_children,
-        signals=Signals(**{signal: ""}),
-        data_type=type,
-        data_accordion_root="",
-        cls=cn("accordion-container", cls),
+        *children,
+        cls=cn("accordion", cls),
         **attrs
     )
 
@@ -70,120 +59,51 @@ def Accordion(
 def AccordionItem(
     trigger_content,
     *children,
-    id: str = "",
     open: bool = False,
+    name: Optional[str] = None,
     cls: str = "",
     **attrs: Any
-):
+) -> rt.HtmlString:
     """
-    Individual accordion item with trigger and collapsible content.
+    Individual accordion item using HTML details/summary.
     
     Args:
-        trigger_content: Content for the accordion trigger button
+        trigger_content: Content for the accordion trigger
         *children: Collapsible content
-        id: Unique item identifier
-        open: Whether item starts open (only for "multiple" type)
-        cls: CSS classes for the item
+        open: Whether item starts open
+        name: Name for grouping (only one item with same name can be open)
+        cls: CSS classes for the details element
         **attrs: Additional HTML attributes
-    """
-    def create_item(signal: str, accordion_type: str = "single"):
-        item_id = id or f"accordion-item-{next(_accordion_ids)}"
         
-        if accordion_type == "single":
-            # Single type: use signal to track which item is open
-            is_open = f"${signal} === '{item_id}'"
-            toggle_action = f"${signal} === '{item_id}' ? ${signal} = '' : ${signal} = '{item_id}'"
-            open_class = f"${signal} === '{item_id}'"
-        else:
-            # Multiple type: each item has its own open state
-            item_signal = f"{signal}_{item_id}"
-            is_open = f"${item_signal}"
-            toggle_action = f"${item_signal} = !${item_signal}"
-            open_class = f"${item_signal}"
+    Returns:
+        details element with summary trigger and collapsible content
         
-        return rt.Details(
-            # Trigger button
-            rt.Summary(
-                trigger_content,
-                # Chevron icon that rotates when open
-                Icon("chevron-down", cls="accordion-chevron transition-transform duration-200"),
-                cls="flex flex-1 items-center justify-between gap-4 py-4 text-left text-sm font-medium cursor-pointer hover:underline",
-                on_click=toggle_action
-            ),
-            
-            # Collapsible content with grid animation
-            rt.Div(
-                rt.Div(
-                    *children,
-                    cls="accordion-content-wrapper pb-4 pt-0"
-                ),
-                cls=cn(
-                    "grid transition-[grid-template-rows] duration-300 ease-out",
-                    "accordion-initially-open" if open else ""
-                ),
-                **{
-                    "data-attr-style": f"grid-template-rows: {{{is_open}}} ? '1fr' : '0fr'"
-                }
-            ),
-            
-            id=item_id,
-            data_accordion_item="",
-            **{
-                "data-attr-data-state": f"{{{is_open}}} ? 'open' : 'closed'",
-                "data-attr-open": is_open if accordion_type == "multiple" else None
-            },
-            cls=cn("group border-b last:border-b-0", cls),
-            **attrs
-        )
-    
-    return create_item
-
-
-def AccordionTrigger(
-    *children,
-    cls: str = "",
-    **attrs: Any
-):
+    Examples:
+        # Standalone item
+        AccordionItem("Click to expand", P("Hidden content"))
+        
+        # Grouped items (only one can be open)
+        AccordionItem("Item 1", P("Content 1"), name="group")
+        AccordionItem("Item 2", P("Content 2"), name="group")
     """
-    Standalone accordion trigger for more control over styling.
-    Used inside AccordionItem if you need custom trigger styling.
-    
-    Args:
-        *children: Trigger content
-        cls: CSS classes for the trigger
-        **attrs: Additional HTML attributes
-    """
-    return lambda signal, accordion_type: rt.Summary(
-        *children,
-        Icon("chevron-down", cls="accordion-chevron transition-transform duration-200"),
-        cls=cn(
-            "flex flex-1 items-center justify-between gap-4 py-4",
-            "text-left text-sm font-medium cursor-pointer hover:underline",
-            cls
-        ),
+    details_attrs = {
+        "cls": cn("accordion-item", cls),
+        "open": open,
         **attrs
-    )
-
-
-def AccordionContent(
-    *children,
-    cls: str = "",
-    **attrs: Any
-):
-    """
-    Standalone accordion content for more control over styling.
-    Used inside AccordionItem if you need custom content styling.
+    }
     
-    Args:
-        *children: Content to be shown/hidden
-        cls: CSS classes for the content wrapper
-        **attrs: Additional HTML attributes
-    """
-    return lambda signal, accordion_type: rt.Div(
+    # Add name attribute for grouping behavior
+    if name:
+        details_attrs["name"] = name
+    
+    return rt.Details(
+        rt.Summary(
+            trigger_content,
+            cls="accordion-trigger"
+        ),
         rt.Div(
             *children,
-            cls=cn("accordion-content-wrapper pb-4 pt-0", cls)
+            cls="accordion-content"
         ),
-        cls="grid transition-[grid-template-rows] duration-300 ease-out",
-        **attrs
+        **details_attrs
     )

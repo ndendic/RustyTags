@@ -60,6 +60,27 @@ show=f"$active_tab === 'tab1'"
 
 **❌ DON'T**: Wrap simple HTML elements just for styling - use `rt.Button()`, `rt.Input()` directly.
 
+### **Critical Pattern: Native HTML First**
+**✅ DO**: Use native HTML features when they exist:
+```python
+# Native HTML accordion using details/summary + name attribute
+def AccordionItem(trigger, *content, name=None, **attrs):
+    return rt.Details(
+        rt.Summary(trigger, cls="accordion-trigger"),
+        rt.Div(*content, cls="accordion-content"),
+        name=name,  # Native accordion behavior!
+        **attrs
+    )
+```
+
+**❌ DON'T**: Reinvent native functionality with complex JavaScript/signal management:
+```python
+# Avoid: 190+ lines of complex state management for something HTML does natively
+def ComplexAccordion(*children, type="single", signal=""):
+    # Complex lambda closures, signal coordination, custom animations...
+    pass
+```
+
 ### **Critical Pattern: Minimal API Surface**
 **✅ DO**: Keep component APIs focused and composable:
 ```python
@@ -339,7 +360,7 @@ Input("email", placeholder="Email")
 - `FormField` - Label + input + error + help text with proper associations and validation states
 - `RadioGroup` - Multiple radio inputs with grouping, labels, and state coordination
 - `Tabs` - Tab buttons + panels + ARIA relationships + keyboard navigation
-- `Accordion` - Headers + collapsible content + proper ARIA states
+- ✅ `Accordion` - **COMPLETED** - Simplified to use native HTML details/summary elements with name-based grouping
 
 **Tier 2 - Advanced Interactive Patterns:**
 - `Combobox/Autocomplete` - Input + dropdown + filtering + selection + async search + keyboard nav
@@ -431,17 +452,39 @@ def home(request):
 6. ✅ Set package structure (flat extension module)
 7. ✅ Framework integration strategy (universal)
 
-### **Phase 2: MVP Anatomical Patterns** (Next)
+### **Phase 2: MVP Anatomical Patterns** (Current)
 1. ✅ Create component base utilities for ID generation, signals, and styling
 2. 🔄 Implement Tier 1 anatomical patterns:
    - FormField (label + input + error + help text associations)
    - Dropdown/Select (trigger + menu + options + positioning + keyboard nav)
    - Modal/Dialog (backdrop + content + focus trap + ESC + scroll lock)
    - RadioGroup (grouped radio inputs + labels + state coordination)
-3. 🔄 Establish anatomical pattern templates and composition helpers
+   - ✅ **Accordion** - **COMPLETED** using native HTML details/summary
+3. ✅ **Establish documentation system** - **COMPLETED** with ComponentShowcase pattern
 4. 🔄 Implement automatic accessibility for complex patterns
 5. 🔄 Create comprehensive demos and tests
 6. 🔄 Document pattern usage and customization
+
+### **Key Lessons Learned**
+
+#### **Accordion Simplification: Native HTML First**
+Our accordion component taught us the critical importance of **native HTML first**:
+- **Before**: 190+ lines of complex signal management, lambda closures, and custom animations
+- **After**: ~100 lines using native `<details>` elements with `name` attribute for accordion behavior
+- **Result**: Better accessibility, performance, and developer experience with less code
+
+**Rule**: Always check if native HTML can solve the problem before building complex abstractions.
+
+#### **Documentation Innovation: ComponentShowcase System**
+Developed an automated documentation system that eliminates code/demo sync issues:
+- **ComponentShowcase** utility automatically extracts code from example functions
+- **Tabbed interface** shows live preview + auto-generated code examples
+- **Always accurate** - no manual maintenance of code examples needed
+- **Consistent UX** - all component demos follow the same interactive pattern
+
+**Rule**: Use ComponentShowcase for all component demos to ensure accuracy and consistency.
+
+**Reference**: See `instructions/DOCUMENTATION_FLOW.md` for complete implementation guide.
 
 ### **Phase 3: Advanced Interactive Patterns** (Future)
 1. ⏳ Tier 2 interactive patterns (Combobox, DatePicker, Toggle, CheckboxGroup, etc.)
