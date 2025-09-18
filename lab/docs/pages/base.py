@@ -40,13 +40,16 @@ with open(xtras_css_path, 'r') as f:
 inspector = Script(src="/static/js/datastar-inspector.js", type="module")
 hdrs = (
     Link(rel='stylesheet', href='https://unpkg.com/open-props'),
+    Link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css", type="text/css"),
+
+    # Link(rel='stylesheet', href='https://unpkg.com/open-props/normalize.min.css'),
     Style(f"""
         html {{
-            background: light-dark(var(--gradient-5), var(--gradient-16));
             min-height: 100vh;
             color: light-dark(var(--gray-9), var(--gray-1));
-            font-family: var(--font-geometric-humanist);
-            font-size: var(--font-size-1);
+            font-family: var(--font-neo-grotesque);
+            font-size: var(--font-size-fluid-0);
+            letter-spacing: var(--font-letterspacing-1);
         }}
         main {{
             width: min(100% - 2rem, 45rem);
