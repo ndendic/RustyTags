@@ -184,6 +184,171 @@
     }
 }
 
+/* === DIALOG COMPONENTS === */
+
+/* Dialog container */
+.dialog-container {
+    position: relative;
+}
+
+/* Native dialog element styling */
+dialog.dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    max-width: 90vw;
+    max-height: 90vh;
+    z-index: 50;
+}
+
+/* Dialog backdrop */
+.dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 40;
+    backdrop-filter: blur(2px);
+}
+
+/* Dialog content styling */
+.dialog-content {
+    position: relative;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    width: 100%;
+    max-width: 32rem;
+    z-index: 50;
+}
+
+@media (prefers-color-scheme: dark) {
+    .dialog-content {
+        background-color: #1f2937;
+        border: 1px solid #374151;
+    }
+}
+
+/* Dialog sections */
+.dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 1.5rem 0 1.5rem;
+}
+
+.dialog-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.dialog-body {
+    padding: 1.5rem;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+/* Dialog trigger */
+.dialog-trigger {
+    cursor: pointer;
+}
+
+.dialog-trigger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Dialog close button */
+.dialog-close {
+    cursor: pointer;
+}
+
+.dialog-close-x {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    background: transparent;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+}
+
+.dialog-close-x:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+    .dialog-close-x:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* Dialog animations */
+dialog.dialog[data-show="true"] {
+    animation: dialog-fade-in 200ms ease-out;
+}
+
+dialog.dialog[data-show="false"] {
+    animation: dialog-fade-out 150ms ease-in forwards;
+}
+
+@keyframes dialog-fade-in {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes dialog-fade-out {
+    from {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.95);
+    }
+}
+
+/* Backdrop animations */
+.dialog-backdrop[data-show="true"] {
+    animation: backdrop-fade-in 200ms ease-out;
+}
+
+.dialog-backdrop[data-show="false"] {
+    animation: backdrop-fade-out 150ms ease-in;
+}
+
+@keyframes backdrop-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes backdrop-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
 /* === UTILITY CLASSES === */
 
 /* Transform utilities */

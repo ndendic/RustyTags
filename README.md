@@ -727,7 +727,7 @@ python app.py
 
 ## 🤝 Contributing
 
-Contributions welcome! Please read our contributing guidelines and submit issues or pull requests on GitHub.
+Contributions welcome! Please read our contributing guidelines and submit issues or pull requests on GitHub. Start with [`AGENTS.md`](AGENTS.md) for the repository-specific checklist covering build, test, and review expectations.
 
 ## 📚 Documentation
 

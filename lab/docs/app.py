@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from starlette.staticfiles import StaticFiles
 from rusty_tags import *
 from rusty_tags.events import event, emit_async, on
 from rusty_tags.client import Client
@@ -14,7 +15,7 @@ from pages.base import page, Section, Signals
 from pages import register_all_routes
 
 app = FastAPI()
-
+app.mount("/static", StaticFiles(directory="lab/docs/static"), name="static")
 # Register all component documentation routes
 register_all_routes(app)
 
@@ -31,6 +32,7 @@ def index():
                 Li(A("CodeBlock Component", href="/xtras/codeblock", cls="color-blue-6 text-decoration-underline")),
                 Li(A("Tabs Component", href="/xtras/tabs", cls="color-blue-6 text-decoration-underline")),
                 Li(A("Accordion Component (Simplified)", href="/xtras/accordion", cls="color-blue-6 text-decoration-underline")),
+                Li(A("Dialog Component", href="/xtras/dialog", cls="color-blue-6 text-decoration-underline")),
             ),
         ),
         

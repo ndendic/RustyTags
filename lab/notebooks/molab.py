@@ -15,16 +15,28 @@ with app.setup(hide_code=True):
 
     hdrs = (
         rt.Link(rel='stylesheet', href='https://unpkg.com/open-props'),
-        rt.Link(rel='stylesheet', href='https://unpkg.com/open-props/normalize.min.css'),
+        # rt.Link(rel='stylesheet', href='https://unpkg.com/open-props/normalize.min.css'),
         rt.Style("""
             html {
+                background: light-dark(var(--gradient-5), var(--gradient-16));
+                min-height: 100vh;
+                color: light-dark(var(--gray-9), var(--gray-1));
                 font-family: var(--font-geometric-humanist);
-                backroung-color: #EFD49F
                 font-size: var(--font-size-1);
             }
             main {
-                width: min(100% - 2rem, 40rem);
+                width: min(100% - 2rem, 45rem);
                 margin-inline: auto;
+            }
+            ::backdrop {
+                  background-image: linear-gradient(
+                    45deg,
+                    magenta,
+                    rebeccapurple,
+                    dodgerblue,
+                    green
+                  );
+                  opacity: 0.75;
             }
 
         """),
@@ -85,7 +97,35 @@ def _():
     # print the code of the printer def
     source_lines = inspect.getsource(printer).split('\n')
     print('\n'.join(source_lines))
+    return
 
+
+@app.cell(column=2)
+def _():
+    import uuid
+
+    def Dialog(*children,id: str | None = None, **args):
+        if id is not None:
+            args['id'] = id
+        elif 'id' not in args.keys():
+            args['id'] = f"dialog_{uuid.uuid4()}"
+
+        return rt.Dialog(*children,**args)
+
+    def DialogToggle(*children,toggles=None,**args):
+        sigs = rt.Signals(**{toggles: 'false'})
+        return rt.Button(*children,
+                         signals=sigs,
+                         on_click=f"${toggles} ? document.getElementById('{toggles}').hide() : document.getElementById('{toggles}').show()",
+                         **args)
+
+    show(
+        rt.Div(
+            DialogToggle("Dialog", toggles="MyDialog"),
+            Dialog("Hello!", id="MyDialog"),
+            signals = rt.Signals(dialog=False)
+        )
+    )
     return
 
 

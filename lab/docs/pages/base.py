@@ -12,7 +12,7 @@ from rusty_tags.datastar import Signals, DS
 from rusty_tags.events import event, emit_async, on, ANY
 from rusty_tags.client import Client
 from rusty_tags.starlette import *
-from rusty_tags.xtras import LucideIcon, CodeBlock, Tabs, TabsList, TabsTrigger, TabsContent, Accordion, AccordionItem
+from rusty_tags.xtras import LucideIcon, CodeBlock, Tabs, TabsList, TabsTrigger, TabsContent, Accordion, AccordionItem, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter, DialogClose, ConfirmDialog
 from rusty_tags.xtras.utils import cn
 from datastar_py.fastapi import ReadSignals
 from datastar_py.consts import ElementPatchMode
@@ -37,6 +37,7 @@ with open(xtras_css_path, 'r') as f:
     xtras_css = f.read()
 
 # Shared headers for all documentation pages
+inspector = Script(src="/static/js/datastar-inspector.js", type="module")
 hdrs = (
     Link(rel='stylesheet', href='https://unpkg.com/open-props'),
     Style(f"""
@@ -55,14 +56,18 @@ hdrs = (
         /* RustyTags Xtras CSS */
         {xtras_css}
     """),
+    inspector
 )
 
 # Shared HTML and body configuration
 htmlkws = dict(lang="en")
 bodykws = dict(signals=Signals(message="", conn=""))
-
+ftrs = (
+    CustomTag("datastar-inspector"),
+    Script("lucide.createIcons();")
+)
 # Shared page template
-page = create_template(hdrs=hdrs, htmlkw=htmlkws, bodykw=bodykws, highlightjs=True)
+page = create_template(hdrs=hdrs, htmlkw=htmlkws, bodykw=bodykws, ftrs=ftrs, highlightjs=True, datastar=True)
 
 def Section(title, *content):
     """Utility function for creating documentation sections"""
