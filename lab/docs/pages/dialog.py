@@ -19,6 +19,7 @@ def example_basic_dialog():
     return Dialog(
         DialogTrigger(
             "Open basic dialog",
+            toggles="basicDialog",
             style="padding:0.5rem 1rem; border:1px solid currentColor; border-radius:0.5rem; background:transparent; cursor:pointer;",
         ),
         DialogContent(
@@ -138,7 +139,7 @@ def get_routes(app: FastAPI):
     def dialog_docs():
         return Main(
             H1("Dialog Component"),
-            P("The Dialog primitive exposes native `<dialog>` behaviour without imposing styling or global JavaScript."),
+            P("The Dialog primitive exposes native dialog behaviour without imposing styling or global JavaScript."),
 
             Section(
                 "Component Purpose",
@@ -161,13 +162,13 @@ def get_routes(app: FastAPI):
             Section(
                 "Confirm Dialog Demo",
                 P("A convenience wrapper for confirmation workflows."),
-                ComponentShowcase(example_confirm_dialog),
+                # ComponentShowcase(example_confirm_dialog),
             ),
 
             Section(
                 "Custom Dialog Demo",
                 P("Demonstrates id-derived signals, styling hooks, and inline side effects."),
-                ComponentShowcase(example_custom_dialog),
+                # ComponentShowcase(example_custom_dialog),
             ),
 
             Section(

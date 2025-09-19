@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.15.5"
+__generated_with = "0.16.0"
 app = marimo.App(
     width="columns",
     layout_file="layouts/molab.slides.json",
@@ -102,6 +102,12 @@ def _():
 
 @app.cell(column=2)
 def _():
+    mo.md(r"""## Dialog testing""")
+    return
+
+
+@app.cell
+def _():
     import uuid
 
     def Dialog(*children,id: str | None = None, **args):
@@ -112,20 +118,25 @@ def _():
 
         return rt.Dialog(*children,**args)
 
-    def DialogToggle(*children,toggles=None,**args):
+    def DialogToggle(*children,toggles=None,modal=False, **args):
+        if toggles is None:
+            raise ValueError("DialogToggle requires a 'toggles' argument")
+        showAction = 'showModal' if modal else 'show'
         sigs = rt.Signals(**{toggles: 'false'})
-        return rt.Button(*children,
-                         signals=sigs,
-                         on_click=f"${toggles} ? document.getElementById('{toggles}').hide() : document.getElementById('{toggles}').show()",
-                         **args)
+        return rt.Button(
+                    *children,
+                    signals=sigs,           
+                    on_click=f"${toggles} ? document.getElementById('{toggles}').{showAction}() : document.getElementById('{toggles}').close(); ${toggles} = !${toggles};",
+                    **args
+        )
 
-    show(
-        rt.Div(
+    demo = rt.Div(
             DialogToggle("Dialog", toggles="MyDialog"),
             Dialog("Hello!", id="MyDialog"),
-            signals = rt.Signals(dialog=False)
         )
-    )
+    print(demo.render())
+    show(demo)
+
     return
 
 

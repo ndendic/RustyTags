@@ -1,14 +1,16 @@
 {
     "mcpServers": {
         "playwright": {
-            "command": "powershell.exe",
+            "command": "npx",
             "args": [
-                "-Command",
-                "cd C:\\temp; & 'C:\\Program Files\\nodejs\\npx.cmd' @playwright/mcp@latest --browser msedge --output-dir C:\\temp\\playwright-screenshots"
-            ],
-            "env": {
-                "PLAYWRIGHT_BROWSER": "msedge"
-            }
+                "@playwright/mcp@0.0.38",
+                "--browser",
+                "chromium",
+                "--executable-path",
+                "/home/ndendic/.cache/ms-playwright/chromium-1187/chrome-linux/chrome",
+                "--headless",
+                "--no-sandbox"
+            ]
         }
     }
 }

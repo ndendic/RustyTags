@@ -1,4 +1,3 @@
-from .datastar import *
 from .rusty_tags import HtmlString
 from .utils import Page, create_template, page_template, show, AttrDict
 from .client import Client

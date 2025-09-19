@@ -76,10 +76,17 @@ def Dialog(
 
 def DialogTrigger(
     *children: Any,
+    toggles: str|None = None,
+    as_modal: bool = False,
     cls: str = "",
     **attrs: Any,
 ) -> Callable[[DialogContext], rt.HtmlString]:
     """Interactive control that opens the dialog."""
+    if toggles is None:
+        raise ValueError("DialogTrigger requires a 'toggles' argument")
+    showAction = 'showModal' if as_modal else 'show'
+    toggle_action = f"${toggles} ? document.getElementById('{toggles}').{showAction}() : document.getElementById('{toggles}').close(); ${toggles} = !${toggles};"
+    sigs = Signals(**{toggles: 'false'})
 
     def create_trigger(context: DialogContext) -> rt.HtmlString:
         signal = context["signal"]
@@ -89,7 +96,7 @@ def DialogTrigger(
         existing_cls = button_attrs.pop("cls", "")
         user_handler = button_attrs.pop("on_click", "").strip()
         button_type = button_attrs.pop("type", None)
-        handler_parts = [user_handler, f"${signal} = true"] if user_handler else [f"${signal} = true"]
+        handler_parts = [user_handler, toggle_action] if user_handler else [toggle_action]
 
         button_attrs["on_click"] = "; ".join(part for part in handler_parts if part)
         button_attrs.setdefault("type", button_type or "button")
@@ -103,6 +110,7 @@ def DialogTrigger(
 
         return rt.Button(
             *children,
+            signals=sigs,
             **button_attrs,
         )
 
@@ -132,12 +140,12 @@ def DialogContent(
         dialog_attrs = {
             "id": dialog_id,
             "aria-modal": "true" if modal else "false",
-            "data_attr_open": f"${signal} ? '' : null",
-            "data_effect": (
-                f"if (${signal}) {{ if (!this.open) {show_call}; }} "
-                f"else if (this.open) {{ {hide_call}; }}"
-            ),
-            "data_on_close": f"${signal} = false",
+            # "data_attr_open": f"${signal} ? '' : null",
+            # "data_effect": (
+            #     f"if (${signal}) {{ if (!this.open) {show_call}; }} "
+            #     f"else if (this.open) {{ {hide_call}; }}"
+            # ),
+            # "data_on_close": f"${signal} = false",
         }
 
         if default_open:

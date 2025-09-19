@@ -19,10 +19,10 @@ HEADER_URLS = {
 
 def Page(*content, 
          title: str = "RustyTags", 
-         hdrs:tuple=None,
-         ftrs:tuple=None, 
-         htmlkw:dict=None, 
-         bodykw:dict=None,
+         hdrs:tuple|None=None,
+         ftrs:tuple|None=None, 
+         htmlkw:dict|None=None, 
+         bodykw:dict|None=None,
          datastar:bool=True,
          lucide:bool=False,
          highlightjs:bool=False
