@@ -30,21 +30,27 @@ class DS:
         
         Args:
             url: The URL to fetch from
-            target: Optional target selector for where to place the response
-            **params: Query parameters to append to the URL
+            **params: Query parameters to append to the URL. A special parameter
+                  `_ds_options` can be passed as a dictionary to provide
+                  options to the underlying Datastar action.
             
         Returns:
             JavaScript expression string for the @get action
             
         Example:
-            DS.get("/api/data", target="#content", page=1, limit=10)
-            # Returns: "@get('/api/data?page=1&limit=10') @target('#content')"
+            DS.get("/api/data", page=1, _ds_options={'openWhenHidden': True})
+            # Returns: "@get('/api/data?page=1', {'openWhenHidden':true})"
         """
+
+        _ds_options = params.pop('_ds_options', {})
         if params:
             url = f"{url}?{urlencode(params)}"
-        
-        action = f"@get('{url}')"
-        
+
+        if _ds_options:
+            action = f"@get('{url}', {json.dumps(_ds_options).replace('\"', '\'')})"
+        else:
+            action = f"@get('{url}')"
+
         return action
     
     @staticmethod
