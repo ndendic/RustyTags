@@ -1,3 +1,37 @@
+#!/bin/bash
+# Script to switch between local and CI build configurations
+
+case "$1" in
+  "local")
+    echo "Switching to local setuptools configuration..."
+    if [ -f "pyproject_backup.toml" ]; then
+      cp pyproject.toml pyproject_ci.toml 2>/dev/null || true
+      cp pyproject_backup.toml pyproject.toml
+      echo "✅ Switched to setuptools configuration (local builds)"
+    else
+      echo "❌ pyproject_backup.toml not found"
+      exit 1
+    fi
+    ;;
+  "ci")
+    echo "Switching to CI maturin configuration..."
+    if [ -f "pyproject_backup.toml" ]; then
+      cp pyproject.toml pyproject_local.toml 2>/dev/null || true
+      cp pyproject_backup.toml pyproject.toml
+      echo "✅ Switched to maturin configuration (CI builds)"
+    else
+      echo "❌ pyproject_backup.toml not found"
+      exit 1
+    fi
+    ;;
+  "restore")
+    echo "Restoring setuptools configuration..."
+    if [ -f "pyproject_local.toml" ]; then
+      cp pyproject_local.toml pyproject.toml
+      echo "✅ Restored setuptools configuration"
+    else
+      echo "❌ No backup found, creating from current setuptools setup"
+      cat > pyproject.toml << 'EOF'
 [build-system]
 requires = ["setuptools>=61.0", "setuptools-rust"]
 build-backend = "setuptools.build_meta"
@@ -56,3 +90,25 @@ find = { where = ["rusty_tags"] }
 target = "core"
 path = "Cargo.toml"
 binding = "PyO3"
+EOF
+      echo "✅ Created default setuptools configuration"
+    fi
+    ;;
+  *)
+    echo "Usage: $0 {local|ci|restore}"
+    echo ""
+    echo "  local   - Switch to setuptools config for local development"
+    echo "  ci      - Switch to maturin config for CI builds"
+    echo "  restore - Restore setuptools config from backup"
+    echo ""
+    echo "Current configuration:"
+    if grep -q "maturin" pyproject.toml 2>/dev/null; then
+      echo "  📦 Maturin (CI builds)"
+    elif grep -q "setuptools" pyproject.toml 2>/dev/null; then
+      echo "  🔧 Setuptools (local development)"
+    else
+      echo "  ❓ Unknown configuration"
+    fi
+    exit 1
+    ;;
+esac

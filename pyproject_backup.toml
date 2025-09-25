@@ -1,11 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools-rust"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.9.4,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "rusty_tags"
-version = "0.6.0"
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 description = "Core HTML generation library with Rust-based Python extension - high performance, minimal dependencies"
 readme = "README.md"
 license = {text = "MIT"}
@@ -30,11 +29,21 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Text Processing :: Markup :: HTML",
 ]
+dynamic = ["version"]
+dependencies = [
+    # Core dependencies for HTML generation + Datastar integration
+    "datastar-py>=0.6.5"
+]
 
 [project.urls]
 Homepage = "https://github.com/ndendic/rustyTags"
 Repository = "https://github.com/ndendic/rustyTags"
 Issues = "https://github.com/ndendic/rustyTags/issues"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+python-source = "."
+module-name = "rusty_tags.core"
 
 [tool.mypy]
 python_version = "3.12"
@@ -46,13 +55,3 @@ disallow_untyped_defs = true
 include = ["rusty_tags"]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
-
-[tool.setuptools.packages]
-# Pure Python packages/modules
-find = { where = ["rusty_tags"] }
-
-[[tool.setuptools-rust.ext-modules]]
-# Build the extension as core.* inside the package directory (rusty_tags/core.*)
-target = "core"
-path = "Cargo.toml"
-binding = "PyO3"

@@ -1056,7 +1056,7 @@ fn build_attributes_with_datastar(
 }
 
 // Core HtmlString with optimized memory layout
-#[pyclass(module = "rusty_tags")]
+#[pyclass(module = "rusty_tags.core")]
 pub struct HtmlString {
     #[pyo3(get)]
     content: String,
@@ -1544,6 +1544,35 @@ html_tag_optimized!(Var, "Defines a variable");
 html_tag_optimized!(Video, "Defines video content");
 html_tag_optimized!(Wbr, "Defines a word break opportunity");
 
+// Fragment processing function
+#[inline]
+fn build_fragment_optimized(children: Vec<PyObject>, py: Python) -> PyResult<HtmlString> {
+    if children.is_empty() {
+        return Ok(HtmlString::new(String::new()));
+    }
+
+    // Calculate capacity for better performance
+    let estimated_capacity = children.len() * 50;
+    let mut content = String::with_capacity(estimated_capacity);
+
+    for child in children {
+        let child_html = process_child_object(&child, py)?;
+        content.push_str(&child_html);
+    }
+
+    Ok(HtmlString::new(content))
+}
+
+// Fragment tag - renders children without wrapper
+#[pyfunction]
+#[doc = "Fragment renders its children without creating a wrapper element"]
+#[pyo3(signature = (*children, **_kwargs))]
+#[inline(always)]
+fn Fragment(children: Vec<PyObject>, _kwargs: Option<&Bound<'_, PyDict>>, py: Python) -> PyResult<HtmlString> {
+    // Fragment ignores kwargs (no attributes on fragments)
+    build_fragment_optimized(children, py)
+}
+
 // Custom tag function for dynamic tag creation
 #[pyfunction]
 #[doc = "Creates a custom HTML tag with any tag name"]
@@ -1576,7 +1605,7 @@ fn create_html_string(content: String) -> HtmlString {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn rusty_tags(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Core classes
     m.add_class::<HtmlString>()?;
     m.add_class::<TagBuilder>()?;
@@ -1722,6 +1751,9 @@ fn rusty_tags(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(Video, m)?)?;
     m.add_function(wrap_pyfunction!(Wbr, m)?)?;
     
+    // Fragment tag
+    m.add_function(wrap_pyfunction!(Fragment, m)?)?;
+
     // Custom tag function
     m.add_function(wrap_pyfunction!(CustomTag, m)?)?;
     

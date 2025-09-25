@@ -76,10 +76,11 @@ tests/
 .env
 *.env
 
-# Claude
+# AI
 .claude/
 .cursor/
-# CLAUDE.md
+.specify/
+CLAUDE.md
 
 
 # datastar
