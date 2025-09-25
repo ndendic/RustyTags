@@ -38,6 +38,7 @@ jobs:
       - name: Test installation
         run: |
           # Install the built wheel
+          uv venv
           uv pip install --system dist/*.whl
 
           # Test basic functionality
