@@ -50,6 +50,36 @@ def index():
         signals=Signals(message=""),
     )
 
+
+@app.get("/playground")
+@page(title="RustyTags Playground", wrap_in=HTMLResponse)
+def playground():
+    popover_style="background: var(--gray-2); padding: var(--size-1); border-radius: var(--radius-1); border: solid var(--border-size-1);"
+    return Main(
+        H1("RustyTags Playground"),
+        P("This is a playground for RustyTags."),
+        Div(Button("Click me",id="myButton", on_click="$anchorOpen = !$anchorOpen", style="width: 300px; height: 100px;"), cls="anchor-container"),
+
+        Div("default", data_anchor="'#myButton'", show="$anchorOpen", style=popover_style),
+        Div("bottom-start", data_anchor="'#myButton, bottom-start'", show="$anchorOpen", style=popover_style),
+        Div("bottom-end", data_anchor="'#myButton, bottom-end'", show="$anchorOpen", style=popover_style),
+
+        Div("top", data_anchor="'#myButton, top'", show="$anchorOpen", style=popover_style),
+        Div("top-start", data_anchor="'#myButton, top-start'", show="$anchorOpen", style=popover_style),
+        Div("top-end", data_anchor="'#myButton, top-end'", show="$anchorOpen", style=popover_style),
+
+        Div("left", data_anchor="'#myButton, left'", show="$anchorOpen", style=popover_style),
+        Div("left-start", data_anchor="'#myButton, left-start'", show="$anchorOpen", style=popover_style),
+        Div("left-end", data_anchor="'#myButton, left-end'", show="$anchorOpen", style=popover_style),
+
+        Div("right", data_anchor="'#myButton, right'", show="$anchorOpen", style=popover_style),
+        Div("right-start", data_anchor="'#myButton, right-start'", show="$anchorOpen", style=popover_style),
+        Div("right-end", data_anchor="'#myButton, right-end'", show="$anchorOpen", style=popover_style),
+        
+        
+        signals=Signals(anchorOpen=False),
+    )
+
 # Event handlers and utility routes below this line
 # Component documentation routes are now handled in separate page files
 

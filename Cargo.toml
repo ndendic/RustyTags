@@ -2,7 +2,6 @@
 name = "rusty_tags"
 version = "0.5.26"
 edition = "2021"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "rusty_tags"
@@ -32,6 +31,3 @@ strip = "symbols"     # Remove debug symbols for smaller binary
 overflow-checks = false  # Disable overflow checks for maximum speed
 debug-assertions = false # Disable debug assertions
 
-# Enable CPU-specific optimizations
-[build]
-rustflags = ["-C", "target-cpu=native"]

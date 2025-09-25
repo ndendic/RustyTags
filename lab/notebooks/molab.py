@@ -77,9 +77,9 @@ def _(myComp):
 def _():
     show(
         rt.Div(
-            rt.Details(rt.Summary("Click me"), "For real?", name="1"), 
+            rt.Details(rt.Summary("Click me", style="list-style: none;"), "For real?", name="1"), 
             rt.Details(rt.Summary("Here!"), "For real?", name="1"), 
-            rt.Details(rt.Summary("Really?"), "For real?", name="1")
+            rt.Details(rt.Summary("Really?"), "For real?", name="1"),
         )
     )
     return
@@ -136,7 +136,6 @@ def _():
         )
     print(demo.render())
     show(demo)
-
     return
 
 

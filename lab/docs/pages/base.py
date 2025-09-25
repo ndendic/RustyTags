@@ -41,7 +41,7 @@ inspector = Script(src="/static/js/datastar-inspector.js", type="module")
 hdrs = (
     Link(rel='stylesheet', href='https://unpkg.com/open-props'),
     Link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css", type="text/css"),
-
+    Script("import { load, apply } from 'https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js';\r\n        import AnchorPlugin from 'https://cdn.jsdelivr.net/gh/ndendic/data-satelites@master/dist/min/anchor.min.js';\r\n        load(AnchorPlugin);\r\n        apply();", type='module'),
     # Link(rel='stylesheet', href='https://unpkg.com/open-props/normalize.min.css'),
     Style(f"""
         html {{
@@ -54,6 +54,17 @@ hdrs = (
         main {{
             width: min(100% - 2rem, 45rem);
             margin-inline: auto;
+        }}
+        
+        .anchor-container {{
+            position: relative;
+            height: 300px;
+            border: 2px dashed #ccc;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
         }}
         
         /* RustyTags Xtras CSS */
@@ -70,7 +81,7 @@ ftrs = (
     Script("lucide.createIcons();")
 )
 # Shared page template
-page = create_template(hdrs=hdrs, htmlkw=htmlkws, bodykw=bodykws, ftrs=ftrs, highlightjs=True, datastar=True)
+page = create_template(hdrs=hdrs, htmlkw=htmlkws, bodykw=bodykws, ftrs=ftrs, highlightjs=True, datastar=False)
 
 def Section(title, *content):
     """Utility function for creating documentation sections"""

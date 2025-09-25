@@ -62,6 +62,7 @@ def AccordionItem(
     open: bool = False,
     name: Optional[str] = None,
     cls: str = "",
+    hide_marker: bool = False,
     **attrs: Any
 ) -> rt.HtmlString:
     """
@@ -99,7 +100,8 @@ def AccordionItem(
     return rt.Details(
         rt.Summary(
             trigger_content,
-            cls="accordion-trigger"
+            cls="accordion-trigger",
+            style=f"list-style: none;" if hide_marker else ""
         ),
         rt.Div(
             *children,
