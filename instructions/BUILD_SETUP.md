@@ -41,9 +41,12 @@ The GitHub Actions automatically use the maturin configuration for building and 
 
 ## Workflows
 
-### 1. Publish to PyPI (`publish.yml`)
+### 1. CI and Publishing (`CI.yml`)
 
-Automatically builds and publishes to PyPI when you push a version tag:
+Your existing maturin-generated workflow that:
+- **Tests builds** on push/PR to main/master branches
+- **Automatically publishes to PyPI** when you push version tags
+- **Supports all platforms**: Linux (including musl), Windows, macOS with multiple architectures
 
 ```bash
 git tag v0.6.1
