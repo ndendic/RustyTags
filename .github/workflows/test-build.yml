@@ -1,0 +1,68 @@
+name: Test Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
+
+permissions:
+  contents: read
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Prepare maturin build configuration
+        run: |
+          # Use the maturin configuration for CI builds
+          cp pyproject_backup.toml pyproject.toml
+
+      - name: Test build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist --find-interpreter
+
+      - name: Test installation
+        run: |
+          # Install the built wheel
+          uv pip install --system dist/*.whl
+
+          # Test basic functionality
+          python3 -c "
+          from rusty_tags import Div, P, H1, Fragment, when, unless, DS
+          print('✅ All imports successful')
+
+          # Test Fragment
+          frag = Fragment(P('Test'))
+          print(f'Fragment test: {frag}')
+
+          # Test conditionals
+          result = when(True, P('Conditional works'))
+          print(f'Conditional test: {result}')
+
+          # Test DS utilities
+          action = DS.get('/api/test')
+          print(f'DS utility test: {action}')
+
+          print('🎉 All tests passed!')
+          "
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-wheels
+          path: dist
+          retention-days: 7

@@ -1,0 +1,16 @@
+{
+    "mcpServers": {
+        "playwright": {
+            "command": "npx",
+            "args": [
+                "@playwright/mcp@0.0.38",
+                "--browser",
+                "chromium",
+                "--executable-path",
+                "/home/ndendic/.cache/ms-playwright/chromium-1187/chrome-linux/chrome",
+                "--headless",
+                "--no-sandbox"
+            ]
+        }
+    }
+}

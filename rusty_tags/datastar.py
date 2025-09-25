@@ -342,11 +342,23 @@ def signals(**kwargs) -> Dict[str, Any]:
     """
     return kwargs
 
+
 class Signals(AttrDict):
     """
     A dictionary of signals with reactive capabilities.
     """
-    ...
+    def __init__(self, **kwargs: Any) -> None:
+        if "namespace" in kwargs:
+            setattr(self, "_namespace", kwargs.pop("namespace"))
+        
+        super().__init__(**kwargs)
+
+        for k, v in kwargs.items():
+            setattr(self, f"_{k}", f"{self._namespace}.{k}" if self._namespace else k)
+            setattr(self, f"_S{k}", f"${self._namespace}.{k}" if self._namespace else f"${k}")
+        
+    def __str__(self):
+        return f"{{{self._namespace}: {super().__str__()}}}" if self._namespace else super().__str__()
 
 def reactive_class(**conditions) -> Dict[str, str]:
     """

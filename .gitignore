@@ -76,11 +76,14 @@ tests/
 .env
 *.env
 
-# Claude
+# AI
 .claude/
 .cursor/
-.bmad-core/
+.specify/
 CLAUDE.md
-RustyMonsterUI/
 
-# notebooks
+
+# datastar
+datastar-inspector*
+rusty_monster*
+resources/

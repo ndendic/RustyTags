@@ -1,18 +1,19 @@
-from .datastar import *
-from .rusty_tags import HtmlString
-from .utils import Page, create_template, page_template, show, AttrDict
-from .client import Client
-from .events import *
-from .datastar import *
+from .core import HtmlString
+from .utils import Page, show, create_template, page_template, AttrDict, when, unless
+
 """
 RustyTags - High-performance HTML generation library
 
 A Rust-based Python extension for building HTML/SVG tags with optimized performance.
+Core library focused on fast HTML generation - see 'nitro' package for web framework features.
 """
 
-from .rusty_tags import (  # noqa: E402
+from .core import (  # noqa: E402
     # Core classes
     TagBuilder,
+
+    # Fragment
+    Fragment,
     
     # HTML tags
     A, Aside, B, Body, Br, Button, Code, Div, Em, Form,
@@ -44,6 +45,8 @@ from .rusty_tags import (  # noqa: E402
     CustomTag,
 )
 
+from .datastar import DS, signals, Signals, reactive_class, attribute_generator, SSE, ElementPatchMode, EventType
+
 # Create alias for proper HTML tag name  
 Option = OptionEl
 
@@ -55,6 +58,9 @@ __description__ = "High-performance HTML generation library with Rust-based Pyth
 __all__ = [
     # Core classes
     "HtmlString", "TagBuilder",
+
+    # Fragment
+    "Fragment",
     
     # HTML tags - organized alphabetically
     "A", "Aside", "B", "Body", "Br", "Button", "Code", "Div", "Em", "Form",
@@ -85,28 +91,9 @@ __all__ = [
     # Custom tag function
     "CustomTag",
 
-    # Utilities
-    "Page", "create_template", "page_template", "show", "AttrDict",
+    # Core utilities
+    "Page", "show", "create_template", "page_template", "AttrDict", "when", "unless",
+
     # Datastar utilities
-    "signals", "reactive_class", "attribute_generator","DS",
-    # Client
-    "Client",
-    # Events
-    "Namespace",
-    "ANY",
-    "default_namespace",
-    "event",
-    "on",
-    "emit",
-    "emit_async",
-    "Event",
-    # Datastar
-    'DS',
-    'signals', 
-    'Signals',
-    'reactive_class',
-    'attribute_generator',
-    'SSE',
-    'ElementPatchMode',
-    'EventType'
+    "DS", "signals", "Signals", "reactive_class", "attribute_generator", "SSE", "ElementPatchMode", "EventType",
 ]
