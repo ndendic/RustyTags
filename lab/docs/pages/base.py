@@ -55,7 +55,6 @@ hdrs = (
             width: min(100% - 2rem, 45rem);
             margin-inline: auto;
         }}
-        
         .anchor-container {{
             position: relative;
             height: 300px;
