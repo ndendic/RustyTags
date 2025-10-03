@@ -642,6 +642,40 @@ def collect(cases: list[tuple[Any, Any]], /, join_with: str = " ") -> _JSRaw:
     return _JSRaw(f"{array_expr}.filter(Boolean).join('{join_with}')")
 
 
+def classes(**class_conditions) -> _JSRaw:
+    """
+    Create a JavaScript object literal for Datastar's data-class attribute.
+    
+    Args:
+        **class_conditions: CSS class name -> boolean condition pairs
+        
+    Returns:
+        JavaScript object literal: {class1: condition1, class2: condition2}
+        
+    Example:
+        classes(large=is_large, bold=is_bold)
+        # → {large: $is_large, bold: $is_bold}
+        
+        classes(**{'font-bold': is_bold, hidden: is_hidden})
+        # → {'font-bold': $is_bold, hidden: $is_hidden}
+    """
+    if not class_conditions:
+        return _JSRaw("{}")
+    
+    pairs = []
+    for class_name, condition in class_conditions.items():
+        # Quote class names with hyphens or special chars
+        if '-' in class_name or ' ' in class_name or not class_name.isidentifier():
+            key = f"'{class_name}'"
+        else:
+            key = class_name
+        
+        value = _ensure_expr(condition).to_js()
+        pairs.append(f"{key}: {value}")
+    
+    return _JSRaw("{" + ", ".join(pairs) + "}")
+
+
 # --- Logical Aggregation Helpers ---
 
 
@@ -893,6 +927,7 @@ __all__ = [
     "match",
     "switch",
     "collect",
+    "classes",
     "all",
     "any",
     "post",
