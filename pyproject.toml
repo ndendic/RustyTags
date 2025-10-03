@@ -47,9 +47,9 @@ include = ["rusty_tags"]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
 
-[tool.setuptools.packages]
-# Pure Python packages/modules
-find = { where = ["rusty_tags"] }
+[tool.setuptools.packages.find]
+# Pure Python packages/modules in the root directory
+where = ["."]
 
 [[tool.setuptools-rust.ext-modules]]
 # Build the extension as core.* inside the package directory (rusty_tags/core.*)

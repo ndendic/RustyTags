@@ -258,7 +258,7 @@ dependencies = [
 
 [[package]]
 name = "rusty-tags"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "ahash",
  "bumpalo",
