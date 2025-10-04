@@ -367,24 +367,6 @@ state.toggle("idle", "loading", "success").to_js()
 # → Complex ternary chain
 ```
 
-### Event Modifiers
-
-Add modifiers to expressions for Datastar event handling:
-
-```python
-count = Signal("count", 0)
-
-# Add modifiers
-action = count.add(1)
-action_with_modifiers = action.with_(debounce=300, prevent=True)
-
-# Returns tuple: (expression, modifiers_dict)
-# → (Assignment(...), {"debounce": 300, "prevent": True})
-
-# Use in attributes (processed by Datastar attribute system)
-Button("Click", data_on_click=action.with_(debounce=500))
-```
-
 ---
 
 ## Helper Functions

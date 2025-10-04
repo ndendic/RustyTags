@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.15.5"
+__generated_with = "0.16.5"
 app = marimo.App(width="medium")
 
 with app.setup(hide_code=True):
@@ -413,17 +413,22 @@ def _(Signals):
             rt.P("Current Status: ", rt.Span(text=state.status)),
             rt.Div(
                 text=match(
-                    state.status, idle="⏸️ Ready to start", loading="⏳ Processing...", success="✅ Completed!", error="❌ Failed!", default="❓ Unknown"
+                    state.status, 
+                    idle="⏸️ Ready to start", 
+                    loading="⏳ Processing...", 
+                    success="✅ Completed!", 
+                    error="❌ Failed!", 
+                    default="❓ Unknown"
                 ),
                 style="font-size: 1.5rem; text-align: center; padding: 1rem;",
             ),
             cls="demo-output",
         ),
         rt.Div(
-            rt.Button("Idle", data_on_click=state.status.set("idle")),
-            rt.Button("Loading", data_on_click=state.status.set("loading")),
-            rt.Button("Success", data_on_click=state.status.set("success")),
-            rt.Button("Error", data_on_click=state.status.set("error")),
+            rt.Button("Idle", on_click=state.status.set("idle")),
+            rt.Button("Loading", on_click=state.status.set("loading")),
+            rt.Button("Success", on_click=state.status.set("success")),
+            rt.Button("Error", on_click=state.status.set("error")),
             cls="demo-controls",
         ),
         cls="demo-section",
@@ -450,24 +455,24 @@ def _():
 def _(Signals):
     from rusty_tags.datastar import f
 
-    fState = Signals(first_name="John", last_name="Doe", age_val=25)
+    usr = Signals(first_name="John", last_name="Doe", age_val=25)
 
     template_demo = rt.Div(
         rt.H3("Template Literals"),
         rt.Div(
-            rt.Input(type="text", bind=fState.first_name, placeholder="First name"),
-            rt.Input(type="text", bind=fState.last_name, placeholder="Last name"),
-            rt.Input(type="number", data_bind=fState.age_val, placeholder="Age"),
+            rt.Input(type="text", bind=usr.first_name, placeholder="First name"),
+            rt.Input(type="text", bind=usr.last_name, placeholder="Last name"),
+            rt.Input(type="number", bind=usr.age_val, placeholder="Age"),
             cls="demo-controls",
         ),
         rt.Div(
-            rt.P(text=f("Hello, {fn} {ln}!", fn=fState.first_name, ln=fState.last_name)),
-            rt.P(text=f("You are {age} years old.", age=fState.age_val)),
-            rt.P(text=f("In 10 years, you'll be {future}.", future=fState.age_val + 10)),
+            rt.P(text=f("Hello, {fn} {ln}!", fn=usr.first_name, ln=usr.last_name)),
+            rt.P(text=f("You are {age} years old.", age=usr.age_val)),
+            rt.P(text=f("In 10 years, you'll be {future}.", future=usr.age_val + 10)),
             cls="demo-output",
         ),
         cls="demo-section",
-        signals=fState,
+        signals=usr,
     )
 
     show(template_demo, height="350px")
@@ -551,19 +556,21 @@ def _(Signal):
     cls_large = Signal("cls_large", False)
     cls_bold = Signal("cls_bold", False)
     cls_italic = Signal("cls_italic", False)
+    cls_blue = Signal("cls_blue", False)
 
     classes_demo = rt.Div(
         rt.H3("Datastar data-class with classes()"),
         rt.Div(
-            rt.Label(rt.Input(type="checkbox", data_bind=cls_large), " Large"),
-            rt.Label(rt.Input(type="checkbox", data_bind=cls_bold), " Bold"),
-            rt.Label(rt.Input(type="checkbox", data_bind=cls_italic), " Italic"),
+            rt.Label(rt.Input(type="checkbox", bind=cls_large), " Large"),
+            rt.Label(rt.Input(type="checkbox", bind=cls_bold), " Bold"),
+            rt.Label(rt.Input(type="checkbox", bind=cls_italic), " Italic"),
+            rt.Label(rt.Input(type="checkbox", bind=cls_blue), " Blue"),
             cls="demo-controls",
         ),
         rt.Div(
             rt.P(
                 "Styled Text with data-class",
-                data_class=classes(large=cls_large, bold=cls_bold, italic=cls_italic),
+                data_class=classes(large=cls_large, bold=cls_bold, italic=cls_italic, blue=cls_blue),
                 style="transition: all 0.3s;",
             ),
             cls="demo-output",
@@ -573,20 +580,14 @@ def _(Signal):
             .large { font-size: 2rem; }
             .bold { font-weight: bold; }
             .italic { font-style: italic; }
+            .blue { color: var(--blue-9); }
         """
         ),
         cls="demo-section",
-        signals={"cls_large": False, "cls_bold": False, "cls_italic": False},
+        signals={"cls_large": False, "cls_bold": False, "cls_italic": False, "cls_blue": False},
     )
 
     show(classes_demo, height="350px")
-    return classes, cls_bold, cls_italic, cls_large
-
-
-@app.cell
-def _(classes, cls_bold, cls_italic, cls_large):
-    print("classes() generates object literal for data-class:")
-    print(classes(large=cls_large, bold=cls_bold, italic=cls_italic).to_js())
     return
 
 
@@ -613,9 +614,9 @@ def _(Signal):
     logic_demo = rt.Div(
         rt.H3("Logical Aggregation"),
         rt.Div(
-            rt.Label(rt.Input(type="checkbox", data_bind=check1), " Check 1"),
-            rt.Label(rt.Input(type="checkbox", data_bind=check2), " Check 2"),
-            rt.Label(rt.Input(type="checkbox", data_bind=check3), " Check 3"),
+            rt.Label(rt.Input(type="checkbox", bind=check1), " Check 1"),
+            rt.Label(rt.Input(type="checkbox", bind=check2), " Check 2"),
+            rt.Label(rt.Input(type="checkbox", bind=check3), " Check 3"),
             cls="demo-controls",
         ),
         rt.Div(
@@ -669,24 +670,24 @@ def _(Signal, all_cond, f):
         rt.Div(
             rt.Div(
                 rt.Label("Name:"),
-                rt.Input(type="text", data_bind=form_name, placeholder="Enter name (min 3 chars)"),
+                rt.Input(type="text", bind=form_name, placeholder="Enter name (min 3 chars)"),
                 rt.P("✓ Valid", data_show=name_valid, style="color: green;"),
                 rt.P("✗ Too short", data_show=~name_valid, style="color: red;"),
             ),
             rt.Div(
                 rt.Label("Email:"),
-                rt.Input(type="email", data_bind=form_email, placeholder="Enter email"),
+                rt.Input(type="email", bind=form_email, placeholder="Enter email"),
                 rt.P("✓ Valid", data_show=email_valid, style="color: green;"),
                 rt.P("✗ Invalid", data_show=~email_valid, style="color: red;"),
             ),
             rt.Div(
                 rt.Label("Age:"),
-                rt.Input(type="number", data_bind=form_age, placeholder="Enter age"),
+                rt.Input(type="number", bind=form_age, placeholder="Enter age"),
                 rt.P("✓ Valid", data_show=age_valid, style="color: green;"),
                 rt.P("✗ Must be 18+", data_show=~age_valid, style="color: red;"),
             ),
             rt.Div(
-                rt.Label(rt.Input(type="checkbox", data_bind=form_agree), " I agree to terms"),
+                rt.Label(rt.Input(type="checkbox", bind=form_agree), " I agree to terms"),
             ),
         ),
         rt.Div(

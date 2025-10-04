@@ -308,11 +308,6 @@ class Expr(ABC):
             args.append(_ensure_expr(end))
         return MethodCall(self, "slice", args)
 
-    # --- Event Modifiers ---
-    def with_(self, **modifiers) -> tuple:
-        """Add event modifiers: expr.with_(prevent=True, debounce=300)"""
-        return (self, modifiers)
-
 
 class _JSLiteral(Expr):
     """Internal: A Python value to be safely encoded as a JavaScript literal."""
