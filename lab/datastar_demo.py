@@ -1,7 +1,7 @@
 import marimo
 
-__generated_with = "0.16.5"
-app = marimo.App(width="columns")
+__generated_with = "0.15.5"
+app = marimo.App(width="medium")
 
 with app.setup(hide_code=True):
     import marimo as mo
@@ -46,9 +46,10 @@ with app.setup(hide_code=True):
         """
         ),
     )
+
     htmlkws = dict(lang="en")
-    template = create_template(hdrs=hdrs, htmlkw=htmlkws)
-    page = page_template(hdrs=hdrs, htmlkw=htmlkws)
+    template = rt.create_template(hdrs=hdrs, htmlkw=htmlkws)
+    page = rt.page_template(hdrs=hdrs, htmlkw=htmlkws)
 
 
 @app.function
@@ -83,10 +84,10 @@ def _():
     basic_demo = rt.Div(
         rt.H3("Counter Demo"),
         rt.Div(
-            rt.P("Count: ", data_text=sigs.counter),
-            rt.Button("+", data_on_click=sigs.counter.add(1)),
-            rt.Button("-", data_on_click=sigs.counter.sub(1)),
-            rt.Button("Reset", data_on_click=sigs.counter.set(0)),
+            rt.Button("-", on_click=sigs.counter.sub(1)),
+            rt.P(text=sigs.counter),
+            rt.Button("+", on_click=sigs.counter.add(1)),
+            rt.Button("Reset", on_click=sigs.counter.set(0)),
             cls="demo-controls",
         ),
         cls="demo-section",
@@ -111,24 +112,24 @@ def _():
 
 @app.cell
 def _(Signals):
-    numbers = Signals(num1=10, num2=3)
+    numbers = Signals(x=10, y=3)
     arithmetic_demo = rt.Div(
         rt.H3("Arithmetic Operations"),
         rt.Div(
-            rt.P("Number 1: ", rt.Span(text=numbers.num1)),
-            rt.P("Number 2: ", rt.Span(text=numbers.num2)),
+            rt.P(text="X: "+numbers.x),
+            rt.P(text="Y: "+numbers.y),
             rt.Hr(),
-            rt.P("Addition: ", rt.Span(text=numbers.num1 + numbers.num2)),
-            rt.P("Subtraction: ", rt.Span(text=numbers.num1 - numbers.num2)),
-            rt.P("Multiplication: ", rt.Span(text=numbers.num1 * numbers.num2)),
-            rt.P("Division: ", rt.Span(text=numbers.num1 / numbers.num2)),
-            rt.P("Modulo: ", rt.Span(text=numbers.num1 % numbers.num2)),
+            rt.P(text="Addition: " + (numbers.x + numbers.y)),
+            rt.P(text="Subtraction: " + (numbers.x - numbers.y)),
+            rt.P(text="Multiplication: " + (numbers.x * numbers.y)),
+            rt.P(text="Division: " + (numbers.x / numbers.y)),
+            rt.P(text="Modulo: " + (numbers.x % numbers.y)),
             cls="demo-output",
         ),
         rt.Div(
-            rt.Button("Num1 +5", on_click=numbers.num1.add(5)),
-            rt.Button("Num2 +1", on_click=numbers.num2.add(1)),
-            rt.Button("Reset", on_click=numbers.num1.set(10).to_js() + "; " + numbers.num2.set(3).to_js()),
+            rt.Button("X +5", on_click=numbers.x.add(5)),
+            rt.Button("Y +1", on_click=numbers.y.add(1)),
+            rt.Button("Reset", on_click=numbers.x.set(10).to_js() + "; " + numbers.y.set(3).to_js()),
             cls="demo-controls",
         ),
         cls="demo-section",
@@ -159,10 +160,10 @@ def _(Signal):
     comparison_demo = rt.Div(
         rt.H3("Comparison & Logic"),
         rt.Div(
-            rt.P("Age: ", rt.Span(text=age)),
-            rt.P("Has License: ", rt.Span(text=has_license)),
+            rt.P(text="Age: "+age),
+            rt.P(text="Has License: "+has_license),
             rt.Hr(),
-            rt.P("Is Adult (≥18): ", rt.Span(text=age >= 18)),
+            rt.P(text=("Is Adult (≥18): ")+(age >= 18)),
             rt.P("Can Drive: ", rt.Span(text=(age >= 18) & has_license)),
             rt.P("Is Minor: ", rt.Span(text=age < 18)),
             rt.P("No License: ", rt.Span(text=~has_license)),
@@ -200,13 +201,13 @@ def _(Signal):
 
     string_demo = rt.Div(
         rt.H3("String Manipulation"),
-        rt.Div(rt.Input(type="text", bind=text.full_name, placeholder="Enter text"), cls="demo-controls"),
+        rt.Div(rt.Input(type="text", bind=text, placeholder="Enter text"), cls="demo-controls"),
         rt.Div(
-            rt.P("Original: ", rt.Span(text=text)),
-            rt.P("Uppercase: ", rt.Span(text=text.upper())),
-            rt.P("Lowercase: ", rt.Span(text=text.lower())),
-            rt.P("Length: ", rt.Span(text=text.length)),
-            rt.P("Contains 'Hello': ", rt.Span(text=text.contains("Hello"))),
+            rt.P(text="Original: "+text),
+            rt.P(text="Uppercase: "+text.upper()),
+            rt.P(text="Lowercase: "+text.lower()),
+            rt.P(text="Length: "+text.length),
+            rt.P(text="Contains 'Hello': "+text.contains("Hello")),
             cls="demo-output",
         ),
         cls="demo-section",
@@ -239,16 +240,16 @@ def _(Signal):
     array_demo = rt.Div(
         rt.H3("Array Operations"),
         rt.Div(
-            rt.Input(type="text", bind=new_item.full_name, placeholder="New item"),
+            rt.Input(type="text", bind=new_item, placeholder="New item"),
             rt.Button("Add Item", data_on_click=items.append(new_item).to_js() + "; " + new_item.set("").to_js()),
             rt.Button("Remove Last", data_on_click=items.pop()),
             rt.Button("Clear All", data_on_click=items.set([])),
             cls="demo-controls",
         ),
         rt.Div(
-            rt.P("Count: ", rt.Span(data_text=items.length)),
-            rt.P("Items: ", rt.Span(data_text=items.join(", "))),
-            rt.P("Empty: ", rt.Span(data_text=items.length == 0)),
+            rt.P("Count: ", rt.Span(text=items.length)),
+            rt.P("Items: ", rt.Span(text=items.join(", "))),
+            rt.P("Empty: ", rt.Span(text=items.length == 0)),
             cls="demo-output",
         ),
         cls="demo-section",
@@ -361,9 +362,9 @@ def _(Signal):
             rt.P("Grade: ", rt.Span(text="($score >= 90) ? 'A' : 'B'")),
             rt.P("Grade: ", rt.Span(text=(score >= 90).if_("A", "B"))),
             rt.P("Grade: ", rt.Span(text=(score >= 90).if_("A", (score >= 80).if_("B", (score >= 70).if_("C", "F"))))),
-            rt.P("Status: ", data_text=(score >= 60).if_("Pass", "Fail")),
+            rt.P("Status: ", text=(score >= 60).if_("Pass", "Fail")),
             rt.Div(
-                data_text=(score >= 90).if_("🎉 Excellent!", (score >= 70).if_("👍 Good", "📚 Keep trying")),
+                text=(score >= 90).if_("🎉 Excellent!", (score >= 70).if_("👍 Good", "📚 Keep trying")),
                 style="font-size: 2rem; text-align: center; padding: 1rem;",
             ),
             cls="demo-output",
@@ -454,15 +455,15 @@ def _(Signals):
     template_demo = rt.Div(
         rt.H3("Template Literals"),
         rt.Div(
-            rt.Input(type="text", bind=fState.first_name.full_name, placeholder="First name"),
-            rt.Input(type="text", bind=fState.last_name.full_name, placeholder="Last name"),
-            rt.Input(type="number", data_bind=fState.age_val.full_name, placeholder="Age"),
+            rt.Input(type="text", bind=fState.first_name, placeholder="First name"),
+            rt.Input(type="text", bind=fState.last_name, placeholder="Last name"),
+            rt.Input(type="number", data_bind=fState.age_val, placeholder="Age"),
             cls="demo-controls",
         ),
         rt.Div(
-            rt.P(data_text=f("Hello, {fn} {ln}!", fn=fState.first_name, ln=fState.last_name)),
-            rt.P(data_text=f("You are {age} years old.", age=fState.age_val)),
-            rt.P(data_text=f("In 10 years, you'll be {future}.", future=fState.age_val + 10)),
+            rt.P(text=f("Hello, {fn} {ln}!", fn=fState.first_name, ln=fState.last_name)),
+            rt.P(text=f("You are {age} years old.", age=fState.age_val)),
+            rt.P(text=f("In 10 years, you'll be {future}.", future=fState.age_val + 10)),
             cls="demo-output",
         ),
         cls="demo-section",
@@ -496,9 +497,9 @@ def _(Signal):
     collect_demo = rt.Div(
         rt.H3("Dynamic Styling with collect()"),
         rt.Div(
-            rt.Label(rt.Input(type="checkbox", bind=is_large.full_name), " Large"),
-            rt.Label(rt.Input(type="checkbox", bind=is_bold.full_name), " Bold"),
-            rt.Label(rt.Input(type="checkbox", bind=is_italic.full_name), " Italic"),
+            rt.Label(rt.Input(type="checkbox", bind=is_large), " Large"),
+            rt.Label(rt.Input(type="checkbox", bind=is_bold), " Bold"),
+            rt.Label(rt.Input(type="checkbox", bind=is_italic), " Italic"),
             cls="demo-controls",
         ),
         rt.Div(
@@ -554,9 +555,9 @@ def _(Signal):
     classes_demo = rt.Div(
         rt.H3("Datastar data-class with classes()"),
         rt.Div(
-            rt.Label(rt.Input(type="checkbox", data_bind=cls_large.full_name), " Large"),
-            rt.Label(rt.Input(type="checkbox", data_bind=cls_bold.full_name), " Bold"),
-            rt.Label(rt.Input(type="checkbox", data_bind=cls_italic.full_name), " Italic"),
+            rt.Label(rt.Input(type="checkbox", data_bind=cls_large), " Large"),
+            rt.Label(rt.Input(type="checkbox", data_bind=cls_bold), " Bold"),
+            rt.Label(rt.Input(type="checkbox", data_bind=cls_italic), " Italic"),
             cls="demo-controls",
         ),
         rt.Div(
@@ -612,14 +613,14 @@ def _(Signal):
     logic_demo = rt.Div(
         rt.H3("Logical Aggregation"),
         rt.Div(
-            rt.Label(rt.Input(type="checkbox", data_bind=check1.full_name), " Check 1"),
-            rt.Label(rt.Input(type="checkbox", data_bind=check2.full_name), " Check 2"),
-            rt.Label(rt.Input(type="checkbox", data_bind=check3.full_name), " Check 3"),
+            rt.Label(rt.Input(type="checkbox", data_bind=check1), " Check 1"),
+            rt.Label(rt.Input(type="checkbox", data_bind=check2), " Check 2"),
+            rt.Label(rt.Input(type="checkbox", data_bind=check3), " Check 3"),
             cls="demo-controls",
         ),
         rt.Div(
-            rt.P("All checked: ", rt.Span(data_text=all_cond(check1, check2, check3))),
-            rt.P("Any checked: ", rt.Span(data_text=any_cond(check1, check2, check3))),
+            rt.P("All checked: ", rt.Span(text=all_cond(check1, check2, check3))),
+            rt.P("Any checked: ", rt.Span(text=any_cond(check1, check2, check3))),
             rt.P(
                 "Submit button: ",
                 rt.Button(
@@ -668,31 +669,31 @@ def _(Signal, all_cond, f):
         rt.Div(
             rt.Div(
                 rt.Label("Name:"),
-                rt.Input(type="text", data_bind=form_name.full_name, placeholder="Enter name (min 3 chars)"),
+                rt.Input(type="text", data_bind=form_name, placeholder="Enter name (min 3 chars)"),
                 rt.P("✓ Valid", data_show=name_valid, style="color: green;"),
                 rt.P("✗ Too short", data_show=~name_valid, style="color: red;"),
             ),
             rt.Div(
                 rt.Label("Email:"),
-                rt.Input(type="email", data_bind=form_email.full_name, placeholder="Enter email"),
+                rt.Input(type="email", data_bind=form_email, placeholder="Enter email"),
                 rt.P("✓ Valid", data_show=email_valid, style="color: green;"),
                 rt.P("✗ Invalid", data_show=~email_valid, style="color: red;"),
             ),
             rt.Div(
                 rt.Label("Age:"),
-                rt.Input(type="number", data_bind=form_age.full_name, placeholder="Enter age"),
+                rt.Input(type="number", data_bind=form_age, placeholder="Enter age"),
                 rt.P("✓ Valid", data_show=age_valid, style="color: green;"),
                 rt.P("✗ Must be 18+", data_show=~age_valid, style="color: red;"),
             ),
             rt.Div(
-                rt.Label(rt.Input(type="checkbox", data_bind=form_agree.full_name), " I agree to terms"),
+                rt.Label(rt.Input(type="checkbox", data_bind=form_agree), " I agree to terms"),
             ),
         ),
         rt.Div(
             rt.Button(
                 "Submit", data_disabled=~can_submit, data_attr_style=can_submit.if_("opacity: 1; cursor: pointer;", "opacity: 0.5; cursor: not-allowed;")
             ),
-            rt.P(data_text=f("Hello, {name}!", name=form_name), data_show=can_submit),
+            rt.P(text=f("Hello, {name}!", name=form_name), data_show=can_submit),
             cls="demo-controls",
         ),
         cls="demo-section",

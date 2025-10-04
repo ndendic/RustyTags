@@ -310,6 +310,40 @@ impl DatastarHandler for ClassHandler {
     fn priority(&self) -> u8 { 95 }
 }
 
+/// Handler for data-bind attribute - strips leading $ from signal references
+/// data-bind requires signal names without the $ prefix
+pub struct BindHandler;
+
+impl DatastarHandler for BindHandler {
+    #[inline]
+    fn can_handle(&self, key: &str) -> bool {
+        key == "ds_bind"
+    }
+    
+    #[inline]
+    fn process(&self, _key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
+        let mut datastar_value = DatastarValue::from_python(value)?;
+        
+        // Strip leading $ from bind values since data-bind uses signal names without $
+        datastar_value = match datastar_value {
+            DatastarValue::Expression(s) if s.starts_with('$') => {
+                // Remove the $ prefix for bind attributes
+                DatastarValue::Expression(s[1..].to_string())
+            },
+            DatastarValue::String(s) if s.starts_with('$') => {
+                // Also handle string values that look like signal references
+                DatastarValue::Expression(s[1..].to_string())
+            },
+            other => other,
+        };
+        
+        Ok(("data-bind".to_string(), datastar_value))
+    }
+    
+    #[inline]
+    fn priority(&self) -> u8 { 90 }
+}
+
 /// Default fallback handler for any ds_* attribute
 pub struct DefaultDatastarHandler;
 
@@ -502,6 +536,7 @@ impl DatastarProcessor {
         let mut handlers: Vec<Box<dyn DatastarHandler>> = vec![
             Box::new(SignalsHandler),
             Box::new(ClassHandler),
+            Box::new(BindHandler), // Handle data-bind attribute (strips $)
             Box::new(SpecificEventHandler { prefix: "ds_on_load", data_prefix: "data-on-load" }),
             Box::new(SpecificEventHandler { prefix: "ds_on_scroll", data_prefix: "data-scroll" }),
             Box::new(SpecificEventHandler { prefix: "ds_on_resize", data_prefix: "data-on-resize" }),
