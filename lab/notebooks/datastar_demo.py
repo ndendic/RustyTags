@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.16.5"
-app = marimo.App(width="medium", app_title="Datastar Attributes")
+app = marimo.App(width="columns", app_title="Datastar Attributes")
 
 with app.setup(hide_code=True):
     import marimo as mo
@@ -352,6 +352,7 @@ def _():
 
 @app.cell
 def _(Signal):
+    from rusty_tags.datastar import if_
     score = Signal("score", 75)
 
     conditional_demo = rt.Div(
@@ -360,11 +361,11 @@ def _(Signal):
             rt.P("Score: ", rt.Span(text=score)),
             rt.Hr(),
             rt.P("Grade: ", rt.Span(text="($score >= 90) ? 'A' : 'B'")),
-            rt.P("Grade: ", rt.Span(text=(score >= 90).if_("A", "B"))),
-            rt.P("Grade: ", rt.Span(text=(score >= 90).if_("A", (score >= 80).if_("B", (score >= 70).if_("C", "F"))))),
-            rt.P("Status: ", text=(score >= 60).if_("Pass", "Fail")),
+            rt.P("Grade: ", rt.Span(text=if_(score >= 90, "A", "B"))),
+            rt.P("Grade: ", rt.Span(text=if_(score >= 90, "A", if_(score >= 80, "B", if_(score >= 70, "C", "F"))))),
+            rt.P("Status: ", text=if_(score >= 60, "Pass", "Fail")),
             rt.Div(
-                text=(score >= 90).if_("🎉 Excellent!", (score >= 70).if_("👍 Good", "📚 Keep trying")),
+                text=if_(score >= 90, "🎉 Excellent!", if_(score >= 70, "👍 Good", "📚 Keep trying")),
                 style="font-size: 2rem; text-align: center; padding: 1rem;",
             ),
             cls="demo-output",
@@ -380,7 +381,7 @@ def _(Signal):
     )
 
     show(conditional_demo, height="400px")
-    return (score,)
+    return if_, score
 
 
 @app.cell
@@ -604,7 +605,7 @@ def _():
 
 
 @app.cell
-def _(Signal):
+def _(Signal, if_):
     from rusty_tags.datastar import all as all_cond, any as any_cond
 
     check1 = Signal("check1", False)
@@ -628,7 +629,7 @@ def _(Signal):
                     "Submit",
                     data_disabled=~all_cond(check1, check2, check3),
                     style="opacity: 0.5;",
-                    data_attr_style=all_cond(check1, check2, check3).if_("opacity: 1;", "opacity: 0.5;"),
+                    data_attr_style=if_(all_cond(check1, check2, check3), "opacity: 1;", "opacity: 0.5;"),
                 ),
             ),
             cls="demo-output",
@@ -637,8 +638,16 @@ def _(Signal):
         signals={"check1": False, "check2": False, "check3": False},
     )
 
+
     show(logic_demo, height="350px")
-    return (all_cond,)
+    return all_cond, check1
+
+
+@app.cell
+def _(check1, if_):
+
+    print(if_(check1, "True", "False"))
+    return
 
 
 @app.cell(hide_code=True)
@@ -654,7 +663,7 @@ def _():
 
 
 @app.cell
-def _(Signal, all_cond, f):
+def _(Signal, all_cond, f, if_):
     form_name = Signal("form_name", "")
     form_email = Signal("form_email", "")
     form_age = Signal("form_age", 0)
@@ -692,7 +701,7 @@ def _(Signal, all_cond, f):
         ),
         rt.Div(
             rt.Button(
-                "Submit", data_disabled=~can_submit, data_attr_style=can_submit.if_("opacity: 1; cursor: pointer;", "opacity: 0.5; cursor: not-allowed;")
+                "Submit", data_disabled=~can_submit, data_attr_style=if_(can_submit, "opacity: 1; cursor: pointer;", "opacity: 0.5; cursor: not-allowed;")
             ),
             rt.P(text=f("Hello, {name}!", name=form_name), data_show=can_submit),
             cls="demo-controls",

@@ -670,6 +670,9 @@ def classes(**class_conditions) -> _JSRaw:
     
     return _JSRaw("{" + ", ".join(pairs) + "}")
 
+def if_(condition: Any, true_val: Any, false_val: Any = "") -> _JSRaw:
+    """Conditional expression: `condition ? true_val : false_val`."""
+    return _JSRaw(f"{_ensure_expr(condition).to_js()} ? {_ensure_expr(true_val).to_js()} : {_ensure_expr(false_val).to_js()}")
 
 # --- Logical Aggregation Helpers ---
 
@@ -859,54 +862,6 @@ def _apply_additive_class_behavior(processed: dict) -> None:
         processed["data-attr-class"] = NotStr(f"`{base_classes} ${{{reactive_classes}}}`")
 
 
-# --- Main Engine ---
-
-
-def process_datastar_kwargs(kwargs: dict) -> tuple[dict, set[Signal]]:
-    """Maps Pythonic kwargs to Datastar data-* attributes."""
-    processed: dict[str, Any] = {}
-    signals_found: set[Signal] = set()
-
-    def collect(expr: Any) -> None:
-        _collect_signals(expr, signals_found)
-
-    for key, value in kwargs.items():
-        if key == "data_signals":
-            processed["data-signals"] = _handle_data_signals(value)
-            continue
-
-        normalized_key = _normalize_data_key(key)
-        match value:
-            case list():
-                processed[normalized_key] = NotStr(_expr_list_to_js(value, collect))
-            case (expr, modifiers) if isinstance(modifiers, dict):
-                js_str = ""
-                if isinstance(expr, Expr | Signal):
-                    collect(expr)
-                    js_str = expr.to_js()
-                elif isinstance(expr, list):
-                    js_str = _expr_list_to_js(expr, collect)
-                else:
-                    js_str = str(expr)
-                final_key = f"{normalized_key}{_build_modifier_suffix(modifiers)}"
-                processed[final_key] = NotStr(js_str)
-            case Expr() as expr:
-                collect(expr)
-                js_str = expr.to_js()
-                if key == "data_bind" and isinstance(expr, Signal):
-                    processed["data-bind"] = expr.full_name
-                elif key == "data_class":
-                    processed["data-class"] = NotStr(js_str)
-                else:
-                    processed[normalized_key] = NotStr(js_str)
-            case _JSLiteral() | _JSRaw() | dict() as val:
-                processed[normalized_key] = NotStr(_to_js(val))
-            case _:
-                processed[key] = value
-
-    _apply_additive_class_behavior(processed)
-    return processed, signals_found
-
 
 # ============================================================================
 # 8. Public API Exports
@@ -940,7 +895,7 @@ __all__ = [
     "Number",
     "String",
     "Boolean",
-    "process_datastar_kwargs",
+    "if_",
     "to_js_value",
 ]
 
