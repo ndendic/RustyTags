@@ -24,11 +24,6 @@ jobs:
       - name: Set up Python
         run: uv python install
 
-      - name: Prepare maturin build configuration
-        run: |
-          # Use the maturin configuration for CI builds
-          cp pyproject_backup.toml pyproject.toml
-
       - name: Test build wheel
         uses: PyO3/maturin-action@v1
         with:
