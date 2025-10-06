@@ -80,6 +80,7 @@ tests/
 .claude/
 .cursor/
 .specify/
+.ai/
 CLAUDE.md
 
 

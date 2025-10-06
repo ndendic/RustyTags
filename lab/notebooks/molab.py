@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.16.0"
+__generated_with = "0.16.5"
 app = marimo.App(width="medium")
 
 with app.setup(hide_code=True):
@@ -23,17 +23,6 @@ with app.setup(hide_code=True):
                 width: min(100% - 2rem, 45rem);
                 margin-inline: auto;
             }
-            ::backdrop {
-                  background-image: linear-gradient(
-                    45deg,
-                    magenta,
-                    rebeccapurple,
-                    dodgerblue,
-                    green
-                  );
-                  opacity: 0.75;
-            }
-
         """),
     )
     htmlkws = dict(lang="en")
@@ -50,21 +39,14 @@ def show(comp:str, width="100%",height="100%"):
 def _():
     myComp = rt.Div(
             # rt.H2("D* Playground"),
-            rt.Button("+",on_click="$counter++"),
-            rt.P("Hello from Marimo!", text="$counter"),
             rt.Button("-",on_click="$counter--"),
-    
-            style={"display: grid; gap: 1rem; width: min(100% - 2rem, 20rem); margin-inline: auto;": "$counter>0"},
+            rt.P("Hello from Marimo!", text="$counter"),
+            rt.Button("+",on_click="$counter++"),
+
+            style="display: flex; gap: 1rem; width: min(100% - 2rem, 20rem); margin-inline: auto; align-items: center;",
             signals = {"message": "Hello ", "name": "Nikola", "counter":"0"}
         )
     show(myComp)
-
-    return
-
-
-@app.cell
-def _():
-    rt.Button(on_click="$counter++")("+")
     return
 
 

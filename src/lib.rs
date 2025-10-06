@@ -255,29 +255,6 @@ impl DatastarHandler for EventHandler {
     fn priority(&self) -> u8 { 80 }
 }
 
-/// Handler for specific high-priority event patterns
-pub struct SpecificEventHandler {
-    pub prefix: &'static str,
-    pub data_prefix: &'static str,
-}
-
-impl DatastarHandler for SpecificEventHandler {
-    #[inline]
-    fn can_handle(&self, key: &str) -> bool {
-        key.starts_with(self.prefix)
-    }
-    
-    #[inline]
-    fn process(&self, key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
-        let data_key = key.replace(self.prefix, self.data_prefix).replace('_', "-");
-        let datastar_value = DatastarValue::from_python(value)?;
-        Ok((data_key, datastar_value))
-    }
-    
-    #[inline]
-    fn priority(&self) -> u8 { 90 }
-}
-
 /// Handler for reactive class binding (ds_cls)
 pub struct ClassHandler;
 
@@ -310,6 +287,40 @@ impl DatastarHandler for ClassHandler {
     fn priority(&self) -> u8 { 95 }
 }
 
+/// Handler for data-bind attribute - strips leading $ from signal references
+/// data-bind requires signal names without the $ prefix
+pub struct BindHandler;
+
+impl DatastarHandler for BindHandler {
+    #[inline]
+    fn can_handle(&self, key: &str) -> bool {
+        key == "ds_bind"
+    }
+    
+    #[inline]
+    fn process(&self, _key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
+        let mut datastar_value = DatastarValue::from_python(value)?;
+        
+        // Strip leading $ from bind values since data-bind uses signal names without $
+        datastar_value = match datastar_value {
+            DatastarValue::Expression(s) if s.starts_with('$') => {
+                // Remove the $ prefix for bind attributes
+                DatastarValue::Expression(s[1..].to_string())
+            },
+            DatastarValue::String(s) if s.starts_with('$') => {
+                // Also handle string values that look like signal references
+                DatastarValue::Expression(s[1..].to_string())
+            },
+            other => other,
+        };
+        
+        Ok(("data-bind".to_string(), datastar_value))
+    }
+    
+    #[inline]
+    fn priority(&self) -> u8 { 90 }
+}
+
 /// Default fallback handler for any ds_* attribute
 pub struct DefaultDatastarHandler;
 
@@ -331,30 +342,39 @@ impl DatastarHandler for DefaultDatastarHandler {
 }
 
 /// Event key transformation with intelligent pattern detection
+/// 
+/// Transforms event keys according to Datastar specification:
+/// - First __ separates base event from modifiers
+/// - In modifier section: __ stays as __ (separates modifiers), _ becomes . (within modifier)
+/// 
+/// Examples:
+/// - on_click__debounce_500ms -> data-on-click__debounce.500ms
+/// - on_click__window__throttle_1s -> data-on-click__window__throttle.1s
+/// - on_resize__throttle_500ms__noleading -> data-on-resize__throttle.500ms__noleading
 #[inline]
 fn transform_event_key(event_part: &str) -> String {
-    // Handle double underscore -> dot notation (ds_on_click__debounce_500ms)
+    // Handle modifiers (after first __)
     if let Some(double_pos) = event_part.find("__") {
         let base_event = &event_part[..double_pos];
-        let modifier_part = &event_part[double_pos + 2..];
+        let modifier_part = &event_part[double_pos + 2..]; // Skip the first __
         
-        // Convert underscores to dots in modifier part
-        let modifier = modifier_part.replace('_', ".");
-        return format!("data-on-{}.{}", base_event.replace('_', "-"), modifier);
+        // In modifier section:
+        // - Keep __ as __ (separator between modifiers)
+        // - Convert single _ to . (separator within modifier values)
+        
+        // Use placeholder to preserve __
+        let modifier = modifier_part
+            .replace("__", "§§")       // Protect __ temporarily
+            .replace('_', ".")          // Convert single _ to .
+            .replace("§§", "__");       // Restore __
+        
+        return format!("data-on-{}__{}",
+            base_event.replace('_', "-"),  // Event name: _ becomes -
+            modifier
+        );
     }
     
-    // Handle timing modifiers (click_debounce_500ms -> click.debounce.500ms)
-    if event_part.contains("_") && event_part.ends_with("ms") {
-        let parts: Vec<&str> = event_part.split('_').collect();
-        if parts.len() >= 2 {
-            let base_event = parts[0];
-            let modifiers: Vec<&str> = parts[1..].iter().copied().collect();
-            let modifier_str = modifiers.join(".");
-            return format!("data-on-{}.{}", base_event, modifier_str);
-        }
-    }
-    
-    // Default transformation
+    // No modifiers - just convert underscores to hyphens
     format!("data-on-{}", event_part.replace('_', "-"))
 }
 
@@ -366,6 +386,7 @@ fn map_shorthand_attribute(key: &str) -> Option<String> {
         // Core Datastar attributes (most commonly used)
         "signals" => Some("ds_signals".to_string()),
         "bind" => Some("ds_bind".to_string()),
+        "data_bind" => Some("ds_bind".to_string()),  // Also map data_bind for consistency
         "show" => Some("ds_show".to_string()),
         "text" => Some("ds_text".to_string()),
         "attrs" => Some("ds_attr".to_string()),
@@ -502,10 +523,8 @@ impl DatastarProcessor {
         let mut handlers: Vec<Box<dyn DatastarHandler>> = vec![
             Box::new(SignalsHandler),
             Box::new(ClassHandler),
-            Box::new(SpecificEventHandler { prefix: "ds_on_load", data_prefix: "data-on-load" }),
-            Box::new(SpecificEventHandler { prefix: "ds_on_scroll", data_prefix: "data-scroll" }),
-            Box::new(SpecificEventHandler { prefix: "ds_on_resize", data_prefix: "data-on-resize" }),
-            Box::new(EventHandler), // Generic event handler (lower priority)
+            Box::new(BindHandler), // Handle data-bind attribute (strips $)
+            Box::new(EventHandler), // Generic event handler with modifier support
             Box::new(DefaultDatastarHandler), // Fallback handler (lowest priority)
         ];
         
