@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.16.5"
-app = marimo.App(width="medium")
+app = marimo.App(width="medium", app_title="Datastar Attributes")
 
 with app.setup(hide_code=True):
     import marimo as mo
@@ -164,7 +164,7 @@ def _(Signal):
             rt.P(text="Has License: "+has_license),
             rt.Hr(),
             rt.P(text=("Is Adult (≥18): ")+(age >= 18)),
-            rt.P("Can Drive: ", rt.Span(text=(age >= 18) & has_license)),
+            rt.P(text="Can Drive: "+((age >= 18) & has_license)),
             rt.P("Is Minor: ", rt.Span(text=age < 18)),
             rt.P("No License: ", rt.Span(text=~has_license)),
             cls="demo-output",

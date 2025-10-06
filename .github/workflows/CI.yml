@@ -92,8 +92,10 @@ jobs:
         platform:
           - runner: windows-latest
             target: x64
+            architecture: x64
           - runner: windows-latest
             target: x86
+            architecture: x86
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

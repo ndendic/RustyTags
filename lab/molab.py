@@ -39,20 +39,14 @@ def show(comp:str, width="100%",height="100%"):
 def _():
     myComp = rt.Div(
             # rt.H2("D* Playground"),
-            rt.Button("+",on_click="$counter++"),
-            rt.P("Hello from Marimo!", text="$counter"),
             rt.Button("-",on_click="$counter--"),
+            rt.P("Hello from Marimo!", text="$counter"),
+            rt.Button("+",on_click="$counter++"),
 
             style="display: flex; gap: 1rem; width: min(100% - 2rem, 20rem); margin-inline: auto; align-items: center;",
             signals = {"message": "Hello ", "name": "Nikola", "counter":"0"}
         )
     show(myComp)
-    return
-
-
-@app.cell
-def _():
-    rt.Button(on_click="$counter++")("+")
     return
 
 
