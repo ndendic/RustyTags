@@ -27,7 +27,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Text Processing :: Markup :: HTML",
 ]
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
     # Core dependencies for HTML generation + Datastar integration
     "datastar-py>=0.6.5"
