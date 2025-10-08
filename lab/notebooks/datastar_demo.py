@@ -1,7 +1,11 @@
 import marimo
 
 __generated_with = "0.16.5"
-app = marimo.App(width="columns", app_title="Datastar Attributes")
+app = marimo.App(
+    width="columns",
+    app_title="Datastar Attributes",
+    auto_download=["html"],
+)
 
 with app.setup(hide_code=True):
     import marimo as mo
@@ -581,7 +585,7 @@ def _(Signal):
             .large { font-size: 2rem; }
             .bold { font-weight: bold; }
             .italic { font-style: italic; }
-            .blue { color: var(--blue-9); }
+            .blue { color: var(--blue-9); animation: var(--animation-fade-in)}
         """
         ),
         cls="demo-section",

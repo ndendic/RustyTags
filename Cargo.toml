@@ -1,6 +1,6 @@
 [package]
 name = "rusty-tags"
-version = "0.6.2"
+version = "0.6.3"
 edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
@@ -9,7 +9,7 @@ path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.25.0", features = ["extension-module"] }
+pyo3 = { version = "0.26.0", features = ["extension-module"] }
 itoa = "1.0"  # Fast integer to string conversion
 ryu = "1.0"   # Fast float to string conversion
 ahash = "0.8"  # Faster hash algorithm - significant performance win
@@ -20,7 +20,7 @@ memchr = "2.7"  # SIMD-accelerated string searching
 bumpalo = "3.16"  # Arena allocator for efficient memory management
 serde = { version = "1.0", features = ["derive"] }  # JSON serialization for Datastar
 serde_json = "1.0"  # JSON parsing and generation for reactive attributes
-pythonize = "0.25"  # Convert Python objects to serde_json::Value
+pythonize = "0.26"  # Convert Python objects to serde_json::Value
 
 # Aggressive optimization settings for maximum performance
 [profile.release]

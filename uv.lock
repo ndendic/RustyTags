@@ -37,7 +37,7 @@ wheels = [
 
 [[package]]
 name = "rusty-tags"
-version = "0.6.1"
+version = "0.6.3"
 source = { editable = "." }
 dependencies = [
     { name = "datastar-py" },
