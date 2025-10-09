@@ -16,7 +16,7 @@ RustyTags Core is a **minimal, high-performance HTML generation library** that f
 
 - **🏷️ Complete HTML5/SVG Tags**: All standard HTML5 and SVG elements with optimized Rust implementations
 - **⚡ Blazing Performance**: 3-10x faster than pure Python with memory optimization and intelligent caching
-- **⚛️ Complete Datastar Integration**: Built-in reactive components with `$signals`, `@actions`, DS utilities, and intelligent JavaScript detection
+- **⚛️ Powerful Datastar SDK**: Type-safe `Signal` system with Python operator overloading, conditional logic, validation, and HTTP actions
 - **🪶 Lightweight**: Minimal dependencies - works with any Python web framework
 - **🧠 Smart Processing**: Automatic attribute handling and intelligent type conversion
 - **🔧 Framework Ready**: Drop-in replacement for any HTML generation needs
@@ -78,72 +78,382 @@ page = Page(
 )
 ```
 
-### Reactive Components with Complete Datastar Integration
+### Reactive Components with Datastar SDK
 
-RustyTags Core includes **complete Datastar integration** with both Rust-level processing and Python utilities for high-performance reactive components:
+Inspired by the awesome [StarHTML](https://starhtml.com/), RustyTags Core now includes an even more powerfull **Datastar SDK** that provides a Pythonic API for building reactive components with type-safe signals and expressions:
+
+#### Quick Start with Signals
 
 ```python
-from rusty_tags import Div, Button, P, Input, Page, DS
+from rusty_tags import Div, Button, P, Input, Label, Span, Page
+from rusty_tags.datastar import Signal, Signals
 
-# Reactive counter with built-in Datastar processing
+# Create signals using the Signals class
+sigs = Signals(counter=0, user_name="John", is_active=True)
+
+# Basic reactive counter with Signal methods
 counter = Div(
-    P(text="Count: $count", cls="display"),               # → data-text="$count"
-    Button("+1", on_click="$count++", cls="btn"),         # → data-on-click="$count++"
-    Button("-1", on_click="$count--", cls="btn"),         # → data-on-click="$count--"
-    Button("Reset", on_click="$count = 0", cls="btn"),    # → data-on-click="$count = 0"
-    signals={"count": 0},                                 # → data-signals='{"count": 0}'
-    cls="counter-widget"
-)
-
-# Advanced reactive form with DS utilities
-form = Div(
-    Input(bind="$name", placeholder="Enter name"),
-    Input(bind="$email", placeholder="Enter email"),
-    Button(
-        "Save User",
-        on_click=DS.post("/api/users", data={"name": "$name", "email": "$email"}),
-        cls="btn-primary"
-    ),
-    Button("Load Data", on_click=DS.get("/api/data", target="#results")),
-    Div(id="results"),
-    signals={"name": "", "email": ""}
-)
-
-# Conditional rendering with when/unless utilities
-from rusty_tags import when, unless, Fragment
-
-conditional_ui = Div(
-    H1("Dashboard"),
-    when(user_logged_in, P(f"Welcome, {username}!")),
-    unless(is_loading,
-        Div(
-            Button("Refresh", on_click=DS.get("/api/refresh")),
-            P("Data loaded successfully")
-        )
-    ),
-    # Fragment renders children without wrapper
-    Fragment(
-        P("Multiple elements"),
-        P("Without container")
-    )
+    P(text=sigs.counter, cls="display"),
+    Button("-", on_click=sigs.counter.sub(1)),
+    Button("+", on_click=sigs.counter.add(1)),
+    Button("Reset", on_click=sigs.counter.set(0)),
+    cls="counter-widget",
+    signals=sigs  # Signals object automatically converts to data-signals
 )
 
 # Create a complete page with Datastar CDN
-page = Page(
-    counter, form,
-    title="Reactive App",
-    datastar=True  # Automatically includes Datastar CDN
+page = Page(counter, title="Reactive App", datastar=True)
+```
+
+#### Signal Operations - Pythonic Reactive Expressions
+
+The Signal SDK provides **full Python operator overloading** for building reactive JavaScript expressions:
+
+**Arithmetic Operators:**
+```python
+from rusty_tags.datastar import Signals
+
+numbers = Signals(x=10, y=3)
+demo = Div(
+    P(text="X: " + numbers.x),                           # → "X: ${$x}"
+    P(text="Y: " + numbers.y),                           # → "Y: ${$y}"
+    P(text="Sum: " + (numbers.x + numbers.y)),           # → "Sum: ${$x + $y}"
+    P(text="Product: " + (numbers.x * numbers.y)),       # → "Product: ${$x * $y}"
+    P(text="Division: " + (numbers.x / numbers.y)),      # → "Division: ${$x / $y}"
+    P(text="Modulo: " + (numbers.x % numbers.y)),        # → "Modulo: ${$x % $y}"
+
+    Button("X +5", on_click=numbers.x.add(5)),
+    Button("Y +1", on_click=numbers.y.add(1)),
+    signals=numbers
 )
 ```
 
-**Complete Datastar Integration:**
-- **Shorthand Attributes**: `signals`, `bind`, `show`, `text`, `on_click` → automatically converted to `data-*`
-- **Smart Expression Detection**: `$signals` and `@actions` automatically recognized as JavaScript
-- **DS Utilities**: `DS.get()`, `DS.post()`, `DS.set()`, etc. for action generation
-- **Conditional Rendering**: `when()` and `unless()` utilities with `Fragment` support
-- **Reactive Classes**: `cls={"active": "$isActive"}` for conditional styling
-- **Event Handlers**: `on_click`, `on_submit`, etc. → `data-on-*` attributes
-- **Type Safety**: Intelligent conversion of Python types to JavaScript equivalents
+**Comparison & Logical Operators:**
+```python
+from rusty_tags.datastar import Signal
+
+age = Signal("age", 25)
+has_license = Signal("has_license", True)
+
+validation = Div(
+    P(text="Age: " + age),
+    P(text="Has License: " + has_license),
+    P(text="Is Adult (≥18): " + (age >= 18)),            # → ($age >= 18)
+    P(text="Can Drive: " + ((age >= 18) & has_license)), # → (($age >= 18) && $has_license)
+    P(text="Is Minor: " + (age < 18)),                   # → ($age < 18)
+    P(text="No License: " + (~has_license)),             # → (!$has_license)
+
+    Button("Age +1", on_click=age.add(1)),
+    Button("Toggle License", on_click=has_license.toggle()),
+    signals={"age": 25, "has_license": True}
+)
+```
+
+**String Methods:**
+```python
+text = Signal("text", "Hello World")
+
+string_demo = Div(
+    Input(type="text", bind=text, placeholder="Enter text"),
+    P(text="Original: " + text),
+    P(text="Uppercase: " + text.upper()),                # → $text.toUpperCase()
+    P(text="Lowercase: " + text.lower()),                # → $text.toLowerCase()
+    P(text="Length: " + text.length),                    # → $text.length
+    P(text="Contains 'Hello': " + text.contains("Hello")), # → $text.includes('Hello')
+    signals={"text": "Hello World"}
+)
+```
+
+**Array Methods:**
+```python
+items = Signal("items", ["Apple", "Banana"])
+new_item = Signal("new_item", "Orange")
+
+array_demo = Div(
+    Input(type="text", bind=new_item, placeholder="New item"),
+    # Chaining multiple actions with semicolons
+    Button("Add Item", data_on_click=items.append(new_item).to_js() + "; " + new_item.set("").to_js()),
+    Button("Remove Last", data_on_click=items.pop()),
+    Button("Clear All", data_on_click=items.set([])),
+
+    P("Count: ", Span(text=items.length)),               # → $items.length
+    P("Items: ", Span(text=items.join(", "))),           # → $items.join(', ')
+    P("Empty: ", Span(text=items.length == 0)),          # → $items.length === 0
+    signals={"items": ["Apple", "Banana"], "new_item": ""}
+)
+```
+
+**Math Methods:**
+```python
+value = Signal("value", 7.825)
+
+math_demo = Div(
+    P("Value: ", Span(text=value)),
+    P("Rounded: ", Span(text=value.round())),            # → Math.round($value)
+    P("Rounded (2 decimals): ", Span(text=value.round(2))),
+    P("Absolute: ", Span(text=value.abs())),             # → Math.abs($value)
+    P("Min with 5: ", Span(text=value.min(5))),          # → Math.min($value, 5)
+    P("Max with 10: ", Span(text=value.max(10))),        # → Math.max($value, 10)
+    P("Clamped (0-10): ", Span(text=value.clamp(0, 10))), # → Math.max(0, Math.min(10, $value))
+
+    Button("+0.5", data_on_click=value.add(0.5)),
+    Button("-0.5", data_on_click=value.sub(0.5)),
+    signals={"value": 7.825}
+)
+```
+
+#### Advanced Features - Conditionals, Patterns & Templates
+
+**Conditional Expressions with `if_()`:**
+```python
+from rusty_tags.datastar import if_
+
+score = Signal("score", 75)
+
+conditional = Div(
+    P("Score: ", Span(text=score)),
+    # Simple ternary
+    P("Grade: ", Span(text=if_(score >= 90, "A", "B"))),  # → ($score >= 90) ? 'A' : 'B'
+    P("Status: ", text=if_(score >= 60, "Pass", "Fail")),
+
+    # Nested conditionals
+    P("Grade: ", Span(text=if_(score >= 90, "A",
+                              if_(score >= 80, "B",
+                                 if_(score >= 70, "C", "F"))))),
+
+    # Conditional rendering with data-show
+    Div(text=if_(score >= 90, "🎉 Excellent!",
+                 if_(score >= 70, "👍 Good", "📚 Keep trying")),
+        style="font-size: 2rem; text-align: center;"),
+
+    Button("+10", data_on_click=score.add(10)),
+    Button("-10", data_on_click=score.sub(10)),
+    signals={"score": 75}
+)
+```
+
+**Pattern Matching with `match()`:**
+```python
+from rusty_tags.datastar import match
+
+status = Signals(status="idle")
+
+status_demo = Div(
+    P("Current Status: ", Span(text=status.status)),
+    Div(
+        text=match(
+            status.status,
+            idle="⏸️ Ready to start",
+            loading="⏳ Processing...",
+            success="✅ Completed!",
+            error="❌ Failed!",
+            default="❓ Unknown"
+        ),
+        style="font-size: 1.5rem; text-align: center; padding: 1rem;"
+    ),
+
+    Button("Idle", on_click=status.status.set("idle")),
+    Button("Loading", on_click=status.status.set("loading")),
+    Button("Success", on_click=status.status.set("success")),
+    Button("Error", on_click=status.status.set("error")),
+    signals=status
+)
+```
+
+**Template Literals with `f()`:**
+```python
+from rusty_tags.datastar import f
+
+user = Signals(first_name="John", last_name="Doe", age_val=25)
+
+template = Div(
+    Input(type="text", bind=user.first_name, placeholder="First name"),
+    Input(type="text", bind=user.last_name, placeholder="Last name"),
+    Input(type="number", bind=user.age_val, placeholder="Age"),
+
+    P(text=f("Hello, {fn} {ln}!", fn=user.first_name, ln=user.last_name)),
+    P(text=f("You are {age} years old.", age=user.age_val)),
+    P(text=f("In 10 years, you'll be {future}.", future=user.age_val + 10)),
+    signals=user
+)
+```
+
+#### Dynamic CSS Classes
+
+**Using `collect()` for conditional class joining:**
+```python
+from rusty_tags.datastar import collect
+
+is_large = Signal("is_large", False)
+is_bold = Signal("is_bold", False)
+is_italic = Signal("is_italic", False)
+
+collect_demo = Div(
+    Label(Input(type="checkbox", bind=is_large), " Large"),
+    Label(Input(type="checkbox", bind=is_bold), " Bold"),
+    Label(Input(type="checkbox", bind=is_italic), " Italic"),
+
+    P(
+        "Styled Text",
+        data_class=collect([
+            (is_large, "large"),
+            (is_bold, "bold"),
+            (is_italic, "italic")
+        ], join_with=" "),
+        style="transition: all 0.3s;"
+    ),
+    signals={"is_large": False, "is_bold": False, "is_italic": False}
+)
+```
+
+**Using `classes()` for Datastar's `data-class` (object literal):**
+```python
+from rusty_tags.datastar import classes
+
+cls_large = Signal("cls_large", False)
+cls_bold = Signal("cls_bold", False)
+cls_blue = Signal("cls_blue", False)
+
+classes_demo = Div(
+    Label(Input(type="checkbox", bind=cls_large), " Large"),
+    Label(Input(type="checkbox", bind=cls_bold), " Bold"),
+    Label(Input(type="checkbox", bind=cls_blue), " Blue"),
+
+    P(
+        "Styled Text with data-class",
+        data_class=classes(large=cls_large, bold=cls_bold, blue=cls_blue),
+        style="transition: all 0.3s;"
+    ),
+    signals={"cls_large": False, "cls_bold": False, "cls_blue": False}
+)
+```
+
+#### Form Validation with Logical Aggregation
+
+**Using `all()` and `any()` for validation:**
+```python
+from rusty_tags.datastar import all, any, if_
+
+form_name = Signal("form_name", "")
+form_email = Signal("form_email", "")
+form_age = Signal("form_age", 0)
+form_agree = Signal("form_agree", False)
+
+# Define validation rules
+name_valid = form_name.length >= 3
+email_valid = form_email.contains("@")
+age_valid = form_age >= 18
+can_submit = all(name_valid, email_valid, age_valid, form_agree)
+
+registration_form = Div(
+    # Name field with validation
+    Div(
+        Label("Name:"),
+        Input(type="text", bind=form_name, placeholder="Enter name (min 3 chars)"),
+        P("✓ Valid", data_show=name_valid, style="color: green;"),
+        P("✗ Too short", data_show=~name_valid, style="color: red;")
+    ),
+
+    # Email field with validation
+    Div(
+        Label("Email:"),
+        Input(type="email", bind=form_email, placeholder="Enter email"),
+        P("✓ Valid", data_show=email_valid, style="color: green;"),
+        P("✗ Invalid", data_show=~email_valid, style="color: red;")
+    ),
+
+    # Age field with validation
+    Div(
+        Label("Age:"),
+        Input(type="number", bind=form_age, placeholder="Enter age"),
+        P("✓ Valid", data_show=age_valid, style="color: green;"),
+        P("✗ Must be 18+", data_show=~age_valid, style="color: red;")
+    ),
+
+    # Terms checkbox
+    Div(
+        Label(Input(type="checkbox", bind=form_agree), " I agree to terms")
+    ),
+
+    # Submit button - disabled until all valid
+    Button(
+        "Submit",
+        data_disabled=~can_submit,
+        data_attr_style=if_(can_submit, "opacity: 1; cursor: pointer;",
+                                        "opacity: 0.5; cursor: not-allowed;")
+    ),
+    P(text=f("Hello, {name}!", name=form_name), data_show=can_submit),
+
+    signals={"form_name": "", "form_email": "", "form_age": 0, "form_agree": False}
+)
+```
+
+#### HTTP Actions and Server Communication
+
+```python
+from rusty_tags.datastar import post, get, put, patch, delete
+
+# HTTP action helpers generate @action() expressions
+api_demo = Div(
+    Input(bind="$name", placeholder="Enter name"),
+    Input(bind="$email", placeholder="Enter email"),
+
+    # POST with reactive data (signals are automatically passed)
+    Button(
+        "Save User",
+        on_click=post("/api/users", name="$name", email="$email"),
+        cls="btn-primary"
+    ),
+
+    # GET request
+    Button("Load Data", on_click=get("/api/data")),
+
+    # PUT request
+    Button("Update", on_click=put("/api/users/1", name="$name")),
+
+    # PATCH request
+    Button("Partial Update", on_click=patch("/api/users/1", email="$email")),
+
+    # DELETE request
+    Button("Delete", on_click=delete("/api/users/1")),
+
+    Div(id="results"),
+    signals={"name": "", "email": ""}
+)
+```
+
+#### Property Access for Nested Data
+
+```python
+# Access nested object properties naturally
+user = Signal("user", {"name": "Alice", "age": 30, "email": "alice@example.com"})
+
+user_profile = Div(
+    P("Name: ", Span(text=user.name)),         # → $user.name
+    P("Age: ", Span(text=user.age)),           # → $user.age
+    P("Email: ", Span(text=user.email)),       # → $user.email
+    P("Adult: ", Span(text=(user.age >= 18))), # → ($user.age >= 18)
+
+    Button("Birthday", on_click=user.age.add(1)),
+    Button("Change Name", on_click=user.name.set("Bob")),
+    signals={"user": {"name": "Alice", "age": 30, "email": "alice@example.com"}}
+)
+```
+
+**Complete Datastar SDK Features:**
+- **Type-Safe Signals**: `Signal` and `Signals` classes with automatic type inference
+- **Python Operators**: Full operator overloading (`+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `>`, `<=`, `>=`, `&`, `|`, `~`)
+- **Signal Methods**: `.add()`, `.sub()`, `.set()`, `.toggle()`, `.append()`, `.pop()`, `.remove()`
+- **String Methods**: `.upper()`, `.lower()`, `.strip()`, `.contains()`, `.length`
+- **Math Methods**: `.round()`, `.abs()`, `.min()`, `.max()`, `.clamp()`
+- **Array Methods**: `.append()`, `.prepend()`, `.pop()`, `.remove()`, `.join()`, `.slice()`, `.length`
+- **Conditionals**: `if_()` for ternary expressions, `match()` for pattern matching
+- **Templates**: `f()` for JavaScript template literals with embedded expressions
+- **Dynamic Classes**: `collect()` for joining, `classes()` for object literals
+- **Validation**: `all()` and `any()` for logical aggregation
+- **HTTP Actions**: `get()`, `post()`, `put()`, `patch()`, `delete()` action generators
+- **Raw JavaScript**: `js()` function for raw JavaScript when needed
+- **Property Access**: Natural Python syntax for nested object properties
 
 ### SVG Generation
 
@@ -292,6 +602,7 @@ print(f"Generated 1000 pages with 1000 paragraphs each in {time:.3f}s")
 **🐍 Python Layer** (`rusty_tags/`):
 - **Core Module** (`__init__.py`): All HTML/SVG tags and core types
 - **Utilities** (`utils.py`): Essential helpers (Page, create_template, page_template, show, AttrDict)
+- **Datastar SDK** (`datastar.py`): Type-safe Signal system with Python operator overloading for reactive expressions
 - **Rust Extension**: Pre-compiled high-performance core with Datastar processing
 
 ## Migration from Pre-0.6.x
@@ -314,7 +625,7 @@ RustyTags v0.6.0 represents a major architectural shift to focus on **core HTML 
 | **Feature** | **Status** | **Notes** |
 |-------------|------------|-----------|
 | All HTML/SVG tags | ✅ **Kept** | Complete tag system with Rust performance |
-| **Complete Datastar Integration** | ✅ **Enhanced** | Built-in `$signals`, `@actions`, DS utilities, Fragment, when/unless |
+| **Datastar SDK** | ✅ **Enhanced** | Type-safe `Signal` & `Signals` with full Python operator overloading |
 | `Page()` function | ✅ **Enhanced** | Simple templating with optional Datastar CDN |
 | `create_template()`, `page_template()` | ✅ **Kept** | Essential templating functions |
 | `show()` Jupyter integration | ✅ **Kept** | Perfect for notebooks |
@@ -331,9 +642,10 @@ from rusty_tags.events import emit
 
 **After v0.6.0 (Enhanced Core):**
 ```python
-# Core HTML generation + complete Datastar (RustyTags)
-from rusty_tags import Div, Page, create_template
-from rusty_tags import Button, Input, DS, Fragment, when, unless  # All included
+# Core HTML generation + Datastar SDK (RustyTags)
+from rusty_tags import Div, Page, create_template, Button, Input
+from rusty_tags.datastar import Signal, Signals, if_, match, f, all, any
+from rusty_tags.datastar import post, get, put, patch, delete  # HTTP actions
 
 # Advanced web framework features (Nitro - separate install)
 from nitro import Client, Accordion
@@ -369,16 +681,29 @@ counter = Div(
 )
 ```
 
-3. **Datastar Utilities** (Now included in core):
+3. **Datastar SDK** (Completely rewritten with Signal system):
 ```python
-# ✅ Works in v0.6.0+ - DS utilities now in core
-from rusty_tags import DS, Fragment, when, unless
-action = DS.post("/api/submit", data={"name": "$name"})
+# ✅ New Signal-based API in v0.6.0+
+from rusty_tags.datastar import Signal, Signals, post, if_, all
 
-# Conditional rendering with new utilities
-content = Div(
-    when(user_logged_in, P("Welcome!")),
-    Fragment(P("Multiple"), P("Elements"))
+# Create type-safe signals
+sigs = Signals(name="", email="")
+
+# Use Python operators for reactive expressions
+form = Div(
+    Input(bind=sigs.name, placeholder="Name"),
+    Input(bind=sigs.email, placeholder="Email"),
+
+    # New HTTP action helpers
+    Button("Submit", on_click=post("/api/submit", name=sigs.name, email=sigs.email)),
+
+    # Conditional logic with if_()
+    P(text=if_(sigs.name.length >= 3, "Valid name", "Too short")),
+
+    # Validation with all()
+    Button("Save", data_disabled=~all(sigs.name.length >= 3, sigs.email.contains("@"))),
+
+    signals=sigs
 )
 ```
 
@@ -402,7 +727,7 @@ template = create_template("My App", datastar=True)
 - **Maintenance**: Clear separation of concerns between HTML generation and web framework
 - **Adoption**: Lower barrier to entry for simple HTML generation needs
 
-The built-in Datastar support in RustyTags Core provides excellent reactive capabilities without requiring the full Nitro framework.
+The new **Datastar SDK** in RustyTags Core provides a powerful, type-safe reactive system with Python operator overloading - giving you excellent reactive capabilities without requiring the full Nitro framework.
 
 ## Why RustyTags Core?
 
