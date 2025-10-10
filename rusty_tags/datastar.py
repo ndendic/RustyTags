@@ -863,43 +863,6 @@ def _apply_additive_class_behavior(processed: dict) -> None:
 
 
 
-# ============================================================================
-# 8. Public API Exports
-# ============================================================================
-
-__all__ = [
-    "Signal",
-    "Expr",
-    "js",
-    "value",
-    "f",
-    "regex",
-    "match",
-    "switch",
-    "collect",
-    "classes",
-    "all",
-    "any",
-    "post",
-    "get",
-    "put",
-    "patch",
-    "delete",
-    "clipboard",
-    "console",
-    "Math",
-    "JSON",
-    "Object",
-    "Array",
-    "Date",
-    "Number",
-    "String",
-    "Boolean",
-    "if_",
-    "to_js_value",
-]
-
-
 
 # ============================================================================
 # Original RustyTags Datastar Integration to be enhanced
@@ -1334,12 +1297,41 @@ def reactive_class(**conditions) -> Dict[str, str]:
 
 # Export all public items
 __all__ = [
-    'DS',
-    'signals', 
-    'Signals',
-    'reactive_class',
-    'attribute_generator',
-    'SSE',
-    'ElementPatchMode',
-    'EventType'
+    "DS",
+    "signals",
+    "Signals",
+    "reactive_class",
+    "attribute_generator",
+    "SSE",
+    "ElementPatchMode",
+    "EventType",
+    "Signal",
+    "Expr",
+    "js",
+    "value",
+    "f",
+    "regex",
+    "match",
+    "switch",
+    "collect",
+    "classes",
+    "all",
+    "any",
+    "post",
+    "get",
+    "put",
+    "patch",
+    "delete",
+    "clipboard",
+    "console",
+    "Math",
+    "JSON",
+    "Object",
+    "Array",
+    "Date",
+    "Number",
+    "String",
+    "Boolean",
+    "if_",
+    "to_js_value",
 ]
