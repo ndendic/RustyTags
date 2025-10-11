@@ -40,14 +40,50 @@ jobs:
         with:
           python-version: 3.x
 
-      - name: Download artifacts from latest CI run
+      - name: Download Linux wheels
         uses: dawidd6/action-download-artifact@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: CI.yml
           workflow_conclusion: success
-          name: wheels-linux-x86_64,wheels-linux-x86,wheels-linux-aarch64,wheels-linux-armv7,wheels-linux-s390x,wheels-linux-ppc64le,wheels-musllinux-x86_64,wheels-musllinux-x86,wheels-musllinux-aarch64,wheels-musllinux-armv7,wheels-windows-x64,wheels-windows-x86,wheels-macos-x86_64,wheels-macos-aarch64,wheels-sdist
-          path: artifacts
+          name: wheels-linux-x86_64
+          path: artifacts/linux-x86_64
+
+      - name: Download musllinux wheels
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: CI.yml
+          workflow_conclusion: success
+          name: wheels-musllinux-x86_64
+          path: artifacts/musllinux-x86_64
+
+      - name: Download Windows wheels
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: CI.yml
+          workflow_conclusion: success
+          name: wheels-windows-x64
+          path: artifacts/windows-x64
+
+      - name: Download macOS wheels
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: CI.yml
+          workflow_conclusion: success
+          name: wheels-macos-x86_64
+          path: artifacts/macos-x86_64
+
+      - name: Download sdist
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: CI.yml
+          workflow_conclusion: success
+          name: wheels-sdist
+          path: artifacts/sdist
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
