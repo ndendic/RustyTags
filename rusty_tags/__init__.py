@@ -1,4 +1,4 @@
-from .core import HtmlString
+from .core import HtmlString, HtmlElement
 from .utils import Page, show, create_template, page_template, AttrDict, when, unless
 
 """
@@ -12,8 +12,9 @@ from .core import (  # noqa: E402
     # Core classes
     TagBuilder,
 
-    # Fragment
+    # Fragment and utilities
     Fragment,
+    Safe,
     
     # HTML tags
     A, Aside, B, Body, Br, Button, Code, Div, Em, Form,
@@ -57,10 +58,10 @@ __description__ = "High-performance HTML generation library with Rust-based Pyth
 
 __all__ = [
     # Core classes
-    "HtmlString", "TagBuilder",
+    "HtmlString", "HtmlElement", "TagBuilder",
 
-    # Fragment
-    "Fragment",
+    # Fragment and utilities
+    "Fragment", "Safe",
     
     # HTML tags - organized alphabetically
     "A", "Aside", "B", "Body", "Br", "Button", "Code", "Div", "Em", "Form",

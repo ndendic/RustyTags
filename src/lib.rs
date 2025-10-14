@@ -11,6 +11,25 @@ use bumpalo::Bump;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use pythonize;
+use scraper::{Html as HtmlParser, Node, ElementRef};
+
+/// Escape HTML special characters to prevent XSS and allow displaying HTML as text
+/// Converts: < > & " '
+#[inline]
+fn html_escape(text: &str) -> String {
+    let mut result = String::with_capacity(text.len() + (text.len() / 8));
+    for c in text.chars() {
+        match c {
+            '<' => result.push_str("&lt;"),
+            '>' => result.push_str("&gt;"),
+            '&' => result.push_str("&amp;"),
+            '"' => result.push_str("&quot;"),
+            '\'' => result.push_str("&#x27;"),
+            _ => result.push(c),
+        }
+    }
+    result
+}
 
 /// Convert JSON string from double quotes to single quotes for HTML attributes
 #[inline]
@@ -789,28 +808,43 @@ fn process_child_object(child_obj: &PyObject, py: Python) -> PyResult<String> {
     if let Ok(html_method) = child_bound.getattr("__html__") {
         if html_method.is_callable() {
             if let Ok(html_result) = html_method.call0() {
+                // First try HtmlString
+                if let Ok(html_string) = html_result.extract::<PyRef<HtmlString>>() {
+                    return Ok(html_string.content.clone());
+                }
+                // Then try String
                 if let Ok(html_str) = html_result.extract::<String>() {
                     return Ok(html_str);
                 }
             }
         }
     }
-    
+
     // Check for _repr_html_ method (Jupyter/IPython style)
     if let Ok(repr_html_method) = child_bound.getattr("_repr_html_") {
         if repr_html_method.is_callable() {
             if let Ok(html_result) = repr_html_method.call0() {
+                // First try HtmlString
+                if let Ok(html_string) = html_result.extract::<PyRef<HtmlString>>() {
+                    return Ok(html_string.content.clone());
+                }
+                // Then try String
                 if let Ok(html_str) = html_result.extract::<String>() {
                     return Ok(html_str);
                 }
             }
         }
     }
-    
+
     // Check for render method (common in template libraries)
     if let Ok(render_method) = child_bound.getattr("render") {
         if render_method.is_callable() {
             if let Ok(render_result) = render_method.call0() {
+                // First try HtmlString
+                if let Ok(html_string) = render_result.extract::<PyRef<HtmlString>>() {
+                    return Ok(html_string.content.clone());
+                }
+                // Then try String
                 if let Ok(render_str) = render_result.extract::<String>() {
                     return Ok(render_str);
                 }
@@ -1074,6 +1108,263 @@ fn build_attributes_with_datastar(
     result
 }
 
+// =============================================================================
+// HTML PARSING SYSTEM - HtmlElement for DOM manipulation
+// =============================================================================
+
+/// Represents a parsed HTML element with mutable attributes and children
+/// This enables post-creation inspection and modification of HTML structures
+#[pyclass(module = "rusty_tags.core")]
+pub struct HtmlElement {
+    /// Element tag name (e.g., "div", "input")
+    #[pyo3(get, set)]
+    pub tag: String,
+
+    /// Mutable attribute dictionary
+    #[pyo3(get, set)]
+    pub attributes: Py<PyDict>,
+
+    /// Mixed list of children - can contain HtmlElement objects or text strings
+    #[pyo3(get, set)]
+    pub children: Vec<PyObject>,
+
+    /// Flag to distinguish text nodes from element nodes
+    #[pyo3(get, set)]
+    pub is_text: bool,
+}
+
+#[pymethods]
+impl HtmlElement {
+    #[new]
+    #[pyo3(signature = (tag = String::new(), attributes = None, children = None, is_text = false))]
+    fn new(
+        tag: String,
+        attributes: Option<Py<PyDict>>,
+        children: Option<Vec<PyObject>>,
+        is_text: bool,
+        py: Python,
+    ) -> PyResult<Self> {
+        let attributes = attributes.unwrap_or_else(|| PyDict::new(py).unbind());
+        let children = children.unwrap_or_default();
+
+        Ok(HtmlElement {
+            tag,
+            attributes,
+            children,
+            is_text,
+        })
+    }
+
+    /// Recursively serialize the element tree back to HTML string
+    fn to_html(&self, py: Python) -> PyResult<Py<HtmlString>> {
+        let html_content = self.serialize_to_html(py)?;
+        let html_string = HtmlString::new(html_content);
+        Py::new(py, html_string)
+    }
+
+    /// Implement __html__ protocol so HtmlElement can be used directly as a child
+    /// This allows: Div(parsed_element) to work seamlessly
+    fn __html__(&self, py: Python) -> PyResult<Py<HtmlString>> {
+        self.to_html(py)
+    }
+
+    fn __repr__(&self, py: Python) -> PyResult<String> {
+        if self.is_text {
+            Ok(format!("HtmlElement(text={})", &self.tag))
+        } else {
+            let attrs_repr = self.attributes.bind(py).repr()?.to_string();
+            Ok(format!(
+                "HtmlElement(tag='{}', attributes={}, children={})",
+                self.tag,
+                attrs_repr,
+                self.children.len()
+            ))
+        }
+    }
+
+    /// Custom __getattr__ to allow dot notation for attribute access
+    /// This is called only when the attribute is not found through normal means
+    /// Example: element.data_class instead of element.attributes["data_class"]
+    fn __getattr__(&self, py: Python, name: &str) -> PyResult<PyObject> {
+        // Try to get from attributes dict
+        let attrs_dict = self.attributes.bind(py);
+        if let Ok(value) = attrs_dict.get_item(name) {
+            if let Some(val) = value {
+                return Ok(val.unbind());
+            }
+        }
+
+        // Attribute not found
+        Err(PyErr::new::<pyo3::exceptions::PyAttributeError, _>(
+            format!("'HtmlElement' object has no attribute '{}'", name)
+        ))
+    }
+
+    /// Custom __setattr__ to allow dot notation for attribute assignment
+    /// Example: element.data_class = "foo" instead of element.attributes["data_class"] = "foo"
+    fn __setattr__(&mut self, py: Python, name: &str, value: PyObject) -> PyResult<()> {
+        // Protect standard attributes from being overwritten
+        match name {
+            "tag" => {
+                if let Ok(s) = value.extract::<String>(py) {
+                    self.tag = s;
+                    return Ok(());
+                }
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                    "tag must be a string"
+                ));
+            }
+            "attributes" => {
+                if let Ok(dict) = value.extract::<Py<PyDict>>(py) {
+                    self.attributes = dict;
+                    return Ok(());
+                }
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                    "attributes must be a dict"
+                ));
+            }
+            "children" => {
+                if let Ok(children) = value.extract::<Vec<PyObject>>(py) {
+                    self.children = children;
+                    return Ok(());
+                }
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                    "children must be a list"
+                ));
+            }
+            "is_text" => {
+                if let Ok(b) = value.extract::<bool>(py) {
+                    self.is_text = b;
+                    return Ok(());
+                }
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                    "is_text must be a bool"
+                ));
+            }
+            _ => {}
+        }
+
+        // For other names, treat as HTML attribute assignment
+        // This allows: element.data_class = "foo", element.cls = "bar", etc.
+        let attrs_dict = self.attributes.bind(py);
+        attrs_dict.set_item(name, value)?;
+        Ok(())
+    }
+}
+
+impl HtmlElement {
+    /// Internal method to recursively serialize element to HTML string
+    /// Applies attribute transformations (cls -> class, data_signals -> data-signals, etc.)
+    fn serialize_to_html(&self, py: Python) -> PyResult<String> {
+        // Handle text nodes
+        if self.is_text {
+            return Ok(self.tag.clone());
+        }
+
+        // Build opening tag with attributes
+        let mut result = format!("<{}", self.tag);
+
+        // Process attributes with transformations
+        let attrs_dict = self.attributes.bind(py);
+        let mut regular_attrs = HashMap::default();
+        let mut datastar_attrs = HashMap::default();
+        let processor = DatastarProcessor::new();
+
+        for (key, value) in attrs_dict.iter() {
+            let key_str = key.extract::<String>()?;
+
+            // Check if it's a shorthand attribute first
+            if let Some(mapped_key) = map_shorthand_attribute(&key_str) {
+                // It's a shorthand attribute - process as Datastar
+                let (data_key, data_value) = processor.process(&mapped_key, &value)?;
+                datastar_attrs.insert(data_key, data_value);
+            } else if key_str.starts_with("ds_") {
+                // Direct Datastar attribute
+                let (data_key, data_value) = processor.process(&key_str, &value)?;
+                datastar_attrs.insert(data_key, data_value);
+            } else {
+                // Regular HTML attribute - apply attrmap transformation
+                let mapped_key = attrmap_optimized(&key_str);
+                let value_str = if let Ok(s) = value.extract::<String>() {
+                    s
+                } else {
+                    value.str()?.extract::<String>()?
+                };
+                regular_attrs.insert(mapped_key, value_str);
+            }
+        }
+
+        // Build attributes string using the same logic as normal rendering
+        let attr_string = build_attributes_with_datastar(&regular_attrs, &datastar_attrs);
+        result.push_str(&attr_string);
+        result.push('>');
+
+        // Process children
+        for child_obj in &self.children {
+            let child_bound = child_obj.bind(py);
+
+            // Check if child is an HtmlElement
+            if let Ok(child_element) = child_bound.extract::<PyRef<HtmlElement>>() {
+                result.push_str(&child_element.serialize_to_html(py)?);
+            } else if let Ok(child_str) = child_bound.extract::<String>() {
+                result.push_str(&child_str);
+            } else {
+                // Try to convert to string
+                result.push_str(&child_bound.str()?.extract::<String>()?);
+            }
+        }
+
+        // Closing tag
+        result.push_str(&format!("</{}>", self.tag));
+
+        Ok(result)
+    }
+
+    /// Convert a scraper Node to an HtmlElement tree
+    fn from_node(node_ref: ElementRef, py: Python) -> PyResult<Self> {
+        let element = node_ref.value();
+        let tag = element.name().to_string();
+
+        // Extract attributes
+        let attributes = PyDict::new(py);
+        for (attr_name, attr_value) in element.attrs() {
+            attributes.set_item(attr_name, attr_value)?;
+        }
+
+        // Process children recursively
+        let mut children = Vec::new();
+        for child_node in node_ref.children() {
+            match child_node.value() {
+                Node::Element(_) => {
+                    // Element node - recurse
+                    if let Some(child_ref) = ElementRef::wrap(child_node) {
+                        let child_element = Self::from_node(child_ref, py)?;
+                        children.push(Py::new(py, child_element)?.into());
+                    }
+                },
+                Node::Text(text) => {
+                    // Text node - add as string
+                    let text_str = text.text.to_string();
+                    if !text_str.trim().is_empty() {
+                        let py_str: PyObject = text_str.into_pyobject(py).unwrap().unbind().into();
+                        children.push(py_str);
+                    }
+                },
+                _ => {
+                    // Ignore comments, doctypes, etc.
+                }
+            }
+        }
+
+        Ok(HtmlElement {
+            tag,
+            attributes: attributes.unbind(),
+            children,
+            is_text: false,
+        })
+    }
+}
+
 // Core HtmlString with optimized memory layout
 #[pyclass(module = "rusty_tags.core")]
 pub struct HtmlString {
@@ -1150,6 +1441,70 @@ impl HtmlString {
         let args = (self.content.clone(),);
         let kwargs = pyo3::types::PyDict::new(py);
         Ok((args, kwargs.into()))
+    }
+
+    /// Parse HTML string into an HtmlElement tree for inspection/modification
+    /// This is opt-in - only use when you need to inspect or modify the HTML structure
+    ///
+    /// # Example
+    /// ```python
+    /// html = Div(Input(name="email"), Button("Submit"))
+    /// doc = html.parse()  # Returns HtmlElement tree
+    ///
+    /// # Traverse and modify
+    /// for child in doc.children:
+    ///     if isinstance(child, HtmlElement) and child.tag == "input":
+    ///         child.attributes["required"] = "true"
+    ///
+    /// # Serialize back
+    /// modified_html = doc.to_html()
+    /// ```
+    fn parse(&self, py: Python) -> PyResult<Py<HtmlElement>> {
+        // Parse HTML fragment using scraper
+        let fragment = HtmlParser::parse_fragment(&self.content);
+
+        // Get the root node(s) - for fragments, we may have multiple roots
+        let root_nodes: Vec<_> = fragment.root_element().children().collect();
+
+        // If we have a single root element, return it directly
+        if root_nodes.len() == 1 {
+            if let Some(root_ref) = ElementRef::wrap(root_nodes[0]) {
+                let html_element = HtmlElement::from_node(root_ref, py)?;
+                return Py::new(py, html_element);
+            }
+        }
+
+        // Multiple roots or text nodes - create a wrapper element
+        let mut children = Vec::new();
+        for node in root_nodes {
+            match node.value() {
+                Node::Element(_) => {
+                    if let Some(node_ref) = ElementRef::wrap(node) {
+                        let child_element = HtmlElement::from_node(node_ref, py)?;
+                        children.push(Py::new(py, child_element)?.into());
+                    }
+                },
+                Node::Text(text) => {
+                    // Text node - add as string
+                    let text_str = text.text.to_string();
+                    if !text_str.trim().is_empty() {
+                        let py_str: PyObject = text_str.into_pyobject(py).unwrap().unbind().into();
+                        children.push(py_str);
+                    }
+                },
+                _ => {}
+            }
+        }
+
+        // Create a fragment wrapper with all children
+        let wrapper = HtmlElement {
+            tag: "fragment".to_string(),
+            attributes: PyDict::new(py).unbind(),
+            children,
+            is_text: false,
+        };
+
+        Py::new(py, wrapper)
     }
 }
 
@@ -1592,6 +1947,21 @@ fn Fragment(children: Vec<PyObject>, _kwargs: Option<&Bound<'_, PyDict>>, py: Py
     build_fragment_optimized(children, py)
 }
 
+/// Safe - Renders text with HTML escaping to prevent XSS and display HTML as text
+/// Use this when you want to display user input or HTML code as plain text
+///
+/// Example:
+///   Safe("<script>alert('xss')</script>")
+///   Output: &lt;script&gt;alert('xss')&lt;/script&gt;
+///
+///   Div(Safe("<div>nikola</div>"))
+///   Output: <div>&lt;div&gt;nikola&lt;/div&gt;</div>
+#[pyfunction]
+fn Safe(text: String) -> PyResult<HtmlString> {
+    let escaped = html_escape(&text);
+    Ok(HtmlString::new(escaped))
+}
+
 // Custom tag function for dynamic tag creation
 #[pyfunction]
 #[doc = "Creates a custom HTML tag with any tag name"]
@@ -1627,6 +1997,7 @@ fn create_html_string(content: String) -> HtmlString {
 fn core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Core classes
     m.add_class::<HtmlString>()?;
+    m.add_class::<HtmlElement>()?;
     m.add_class::<TagBuilder>()?;
     
     // Optimized HTML tag functions
@@ -1772,6 +2143,7 @@ fn core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     
     // Fragment tag
     m.add_function(wrap_pyfunction!(Fragment, m)?)?;
+    m.add_function(wrap_pyfunction!(Safe, m)?)?;
 
     // Custom tag function
     m.add_function(wrap_pyfunction!(CustomTag, m)?)?;
