@@ -480,7 +480,7 @@ class Signal(Expr):
         self._ref_only = _ref_only
         self._is_computed = isinstance(initial, Expr)
         self.type_ = type_ or self._infer_type(initial)
-        self.id = f"{namespace}_{name}" if namespace else name
+        self.id = f"{namespace}.{name}" if namespace else name
         self._js = f"${self.id}"
 
     def _infer_type(self, initial: Any) -> type:
