@@ -2,16 +2,16 @@
 Type stubs for RustyTags - High-performance HTML generation library
 """
 
-from typing import Any, Union, overload
+from typing import Any, Union, overload, Optional
 
 # Type aliases for better type hints
 AttributeValue = Union[str, int, float, bool, dict[str, str]]
-Child = Union[str, int, float, bool, "HtmlString", "TagBuilder", Any]
+Child = Union[str, int, float, bool, "HtmlString", "HtmlElement", "TagBuilder", Any]
 
 class HtmlString:
     """Core HTML content container with optimized memory layout"""
     content: str
-    
+
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
     def render(self) -> str: ...
@@ -19,6 +19,45 @@ class HtmlString:
     def __html__(self) -> str: ...
     def encode(self, encoding: str = "utf-8", errors: str | None = None) -> bytes: ...
     def __bytes__(self) -> bytes: ...
+    def parse(self) -> "HtmlElement":
+        """Parse HTML string into an HtmlElement tree for inspection/modification"""
+        ...
+
+class HtmlElement:
+    """Parsed HTML element with mutable attributes and children
+
+    Enables post-creation inspection and modification of HTML structures.
+    """
+    tag: str
+    attributes: dict[str, str]
+    children: list[Union[str, "HtmlElement"]]
+    is_text: bool
+
+    def __init__(
+        self,
+        tag: str = "",
+        attributes: Optional[dict[str, str]] = None,
+        children: Optional[list[Union[str, "HtmlElement"]]] = None,
+        is_text: bool = False
+    ) -> None: ...
+
+    def to_html(self) -> HtmlString:
+        """Recursively serialize the element tree back to HTML string"""
+        ...
+
+    def __html__(self) -> HtmlString:
+        """Implement __html__ protocol so HtmlElement can be used directly as a child"""
+        ...
+
+    def __repr__(self) -> str: ...
+
+    def __getattr__(self, name: str) -> Any:
+        """Allow dot notation for attribute access: element.data_class"""
+        ...
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Allow dot notation for attribute assignment: element.data_class = 'foo'"""
+        ...
 
 class TagBuilder:
     """Callable tag builder for FastHTML-style chaining"""
@@ -1091,12 +1130,36 @@ def ForeignObject(*children: Child, **kwargs: AttributeValue) -> Union[TagBuilde
 # Custom tag function
 @overload
 def CustomTag(tag_name: str, **kwargs: AttributeValue) -> TagBuilder: ...
-@overload  
+@overload
 def CustomTag(tag_name: str, *children: Child, **kwargs: AttributeValue) -> HtmlString: ...
 def CustomTag(tag_name: str, *children: Child, **kwargs: AttributeValue) -> Union[TagBuilder, HtmlString]:
     """Creates a custom HTML tag with any tag name"""
     ...
 
+# Fragment - renders children without wrapper tag
+@overload
+def Fragment(**kwargs: AttributeValue) -> TagBuilder: ...
+@overload
+def Fragment(*children: Child, **kwargs: AttributeValue) -> HtmlString: ...
+def Fragment(*children: Child, **kwargs: AttributeValue) -> Union[TagBuilder, HtmlString]:
+    """Fragment renders its children without creating a wrapper element"""
+    ...
+
+# Safe - HTML escaping for displaying text safely
+def Safe(text: str) -> HtmlString:
+    """Renders text with HTML escaping to prevent XSS and display HTML as text
+
+    Use this when you want to display user input or HTML code as plain text.
+
+    Example:
+        Safe("<script>alert('xss')</script>")
+        # Output: &lt;script&gt;alert('xss')&lt;/script&gt;
+
+        Div(Safe("<div>nikola</div>"))
+        # Output: <div>&lt;div&gt;nikola&lt;/div&gt;</div>
+    """
+    ...
+
 __version__: str
-__author__: str 
+__author__: str
 __description__: str

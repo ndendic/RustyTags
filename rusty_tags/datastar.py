@@ -464,7 +464,7 @@ def _ensure_expr(value: Any) -> Expr:
 
 
 class Signal(Expr):
-    """A typed, validated signal reference."""
+    """Typed reactive state reference that auto-generates JavaScript and data attributes."""
 
     def __init__(
         self,
@@ -480,10 +480,10 @@ class Signal(Expr):
         self._ref_only = _ref_only
         self._is_computed = isinstance(initial, Expr)
         self.type_ = type_ or self._infer_type(initial)
-        self._validate_name()
+        self.id = f"{namespace}.{name}" if namespace else name
+        self._js = f"${self.id}"
 
     def _infer_type(self, initial: Any) -> type:
-        """Infer type from initial value, checking bool before int."""
         if initial is None:
             return str
         if isinstance(initial, bool):
@@ -496,18 +496,10 @@ class Signal(Expr):
             return dict
         return type(initial)
 
-    def _validate_name(self):
-        if not re.match(r"^[a-z][a-z0-9_]*$", self._name):
-            raise ValueError(f"Signal name must be snake_case: '{self._name}'")
-
-    @property
-    def full_name(self) -> str:
-        return f"{self._namespace}_{self._name}" if self._namespace else self._name
-
     def to_dict(self) -> dict[str, Any]:
         if self._is_computed:
             return {}
-        return {self.full_name: self._initial}
+        return {self.id: self._initial}
 
     def get_computed_attr(self) -> tuple[str, Any] | None:
         if self._is_computed:
@@ -515,7 +507,7 @@ class Signal(Expr):
         return None
 
     def to_js(self) -> str:
-        return f"${self.full_name}"
+        return self._js
 
     def __hash__(self):
         return hash((self._name, self._namespace))
@@ -534,8 +526,7 @@ _JS_EXPR_PREFIXES = ("$", "`", "!", "(", "'", "evt.")
 _JS_EXPR_KEYWORDS = {"true", "false", "null", "undefined"}
 
 
-def _to_js(value: Any, allow_expressions: bool = True) -> str:
-    """Convert Python value to JavaScript string (with single quotes)."""
+def _to_js(value: Any, allow_expressions: bool = True, wrap_objects: bool = True) -> str:
     match value:
         case Expr() as expr:
             return expr.to_js()
@@ -548,21 +539,25 @@ def _to_js(value: Any, allow_expressions: bool = True) -> str:
         case str() as s:
             if allow_expressions and (s.startswith(_JS_EXPR_PREFIXES) or s in _JS_EXPR_KEYWORDS):
                 return s
-            return _to_single_quoted_js(s)
+            return json.dumps(s)
         case dict() as d:
             try:
-                return _to_single_quoted_js(d)
+                return json.dumps(d)
             except (TypeError, ValueError):
-                items = [f"{_to_js(k, allow_expressions)}: {_to_js(v, allow_expressions)}" for k, v in d.items()]
-                return f"({{{', '.join(items)}}})"
+                items = [
+                    f"{_to_js(k.replace('_', '-') if isinstance(k, str) else k, allow_expressions)}: {_to_js(v, allow_expressions)}"
+                    for k, v in d.items()
+                ]
+                obj = f"{{{', '.join(items)}}}"
+                return f"({obj})" if wrap_objects else obj
         case list() | tuple() as l:
             try:
-                return _to_single_quoted_js(l)
+                return json.dumps(l)
             except (TypeError, ValueError):
                 items = [_to_js(item, allow_expressions) for item in l]
                 return f"[{', '.join(items)}]"
         case _:
-            return _to_single_quoted_js(str(value))
+            return json.dumps(str(value))
 
 
 def to_js_value(value: Any) -> str:
@@ -586,6 +581,13 @@ def value(v: Any) -> _JSLiteral:
         )
     return _JSLiteral(v)
 
+def expr(v: Any) -> _JSLiteral:
+    """Wrap Python value as JavaScript expression to enable method chaining."""
+    if isinstance(v, Expr):
+        raise TypeError(
+            f"expr() expects a Python value, not {type(v).__name__}. Use the Expr object directly without wrapping."
+        )
+    return _JSLiteral(v)
 
 def f(template_str: str, **kwargs: Any) -> _JSRaw:
     """Create reactive JavaScript template literal, like a Python f-string."""
@@ -629,7 +631,7 @@ def switch(cases: list[tuple[Any, Any]], /, default: Any = "") -> _JSRaw:
 
 
 def collect(cases: list[tuple[Any, Any]], /, join_with: str = " ") -> _JSRaw:
-    """Combines values from all true conditions (for CSS classes, etc.)."""
+    """Collect values from true conditions: useful for CSS classes."""
     if not cases:
         return _JSRaw("''")
     parts = [_ensure_expr(condition).if_(val, "").to_js() for condition, val in cases]
@@ -670,6 +672,13 @@ def classes(**class_conditions) -> _JSRaw:
     
     return _JSRaw("{" + ", ".join(pairs) + "}")
 
+def seq(*exprs: Any) -> _JSRaw:
+    """Comma operator sequence: seq(a, b, c) evaluates all, returns last."""
+    if not exprs:
+        return _JSRaw("undefined")
+    expr_strs = [_ensure_expr(e).to_js() for e in exprs]
+    return _JSRaw(f"({', '.join(expr_strs)})")
+
 def if_(condition: Any, true_val: Any, false_val: Any = "") -> _JSRaw:
     """Conditional expression: `condition ? true_val : false_val`."""
     return _JSRaw(f"{_ensure_expr(condition).to_js()} ? {_ensure_expr(true_val).to_js()} : {_ensure_expr(false_val).to_js()}")
@@ -686,7 +695,7 @@ def _iterable_args(*args):
     )
 
 
-def all(*signals) -> _JSRaw:
+def all_(*signals) -> _JSRaw:
     """Check if all signals are truthy: all(a, b, c) → !!a && !!b && !!c"""
     if not signals:
         return _JSRaw("true")
@@ -694,7 +703,7 @@ def all(*signals) -> _JSRaw:
     return _JSRaw(" && ".join(f"!!{_ensure_expr(s).to_js()}" for s in signals))
 
 
-def any(*signals) -> _JSRaw:
+def any_(*signals) -> _JSRaw:
     """Check if any signal is truthy: any(a, b, c) → !!a || !!b || !!c"""
     if not signals:
         return _JSRaw("false")
@@ -743,6 +752,58 @@ def clipboard(text: str|None = None, element: str|None = None, signal: str|None 
         js_expr = f"document.getElementById({to_js_value(element)})"
 
     return _JSRaw(f"@clipboard({js_expr}.textContent{signal_suffix})")
+
+
+def _timer_ref(timer: "Signal", window: bool = False) -> str:
+    timer_id = timer.id if hasattr(timer, "id") else timer
+    return f"window._{timer_id}" if window else f"${timer_id}"
+
+
+def set_timeout(action: Any, ms: Any, *, store: Union["Signal", None] = None, window: bool = False) -> _JSRaw:
+    """Schedule action(s) after delay.
+
+    set_timeout(copied.set(False), 2000)
+    set_timeout([step.set(2), progress.set(40)], 1000, store=timer)
+    """
+    action_js = (
+        _ensure_expr(action).to_js()
+        if not isinstance(action, list)
+        else "; ".join(_ensure_expr(a).to_js() for a in action)
+    )
+    ms_js = _ensure_expr(ms).to_js()
+    timeout_expr = f"setTimeout(() => {{ {action_js} }}, {ms_js})"
+
+    if store:
+        timer_ref = _timer_ref(store, window)
+        return _JSRaw(f"{timer_ref} = {timeout_expr}")
+    return _JSRaw(timeout_expr)
+
+
+def clear_timeout(timer: "Signal", *actions: Any, window: bool = False) -> _JSRaw:
+    """Cancel timeout, optionally run actions.
+
+    clear_timeout(timer)
+    clear_timeout(timer, open.set(False), loading.set(False))
+    """
+    timer_ref = _timer_ref(timer, window)
+    clear = f"clearTimeout({timer_ref})"
+    if not actions:
+        return _JSRaw(clear)
+
+    action_js = "; ".join(_ensure_expr(a).to_js() for a in actions)
+    return _JSRaw(f"{clear}; {action_js}")
+
+
+def reset_timeout(timer: "Signal", ms: Any, *actions: Any, window: bool = False) -> _JSRaw:
+    """Clear and reschedule timeout (debounce pattern).
+
+    reset_timeout(timer, 700, open.set(True))
+    reset_timeout(timer, 50, selected.set(0), window=True)
+    """
+    timer_ref = _timer_ref(timer, window)
+    action_js = "; ".join(_ensure_expr(a).to_js() for a in actions)
+    ms_js = _ensure_expr(ms).to_js()
+    return _JSRaw(f"clearTimeout({timer_ref}); {timer_ref} = setTimeout(() => {{ {action_js} }}, {ms_js})")
 
 
 def _action(verb: str, url: str, data: dict[str, Any] | None = None, **kwargs) -> _JSRaw:
@@ -1315,8 +1376,8 @@ __all__ = [
     "switch",
     "collect",
     "classes",
-    "all",
-    "any",
+    "all_",
+    "any_",
     "post",
     "get",
     "put",
@@ -1334,4 +1395,5 @@ __all__ = [
     "Boolean",
     "if_",
     "to_js_value",
+    "seq",
 ]
