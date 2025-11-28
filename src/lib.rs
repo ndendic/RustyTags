@@ -341,7 +341,14 @@ impl DatastarHandler for BindHandler {
 }
 
 /// Default fallback handler for any ds_* attribute
+/// 
+/// Handles keyed plugins with colon syntax (data-plugin:key) and
+/// non-keyed plugins with hyphen syntax (data-plugin)
 pub struct DefaultDatastarHandler;
+
+/// Plugins that use keyed syntax with colon separator
+/// e.g., ds_attr_title -> data-attr:title
+const KEYED_PLUGINS: &[&str] = &["attr", "class", "bind", "signals", "computed", "style"];
 
 impl DatastarHandler for DefaultDatastarHandler {
     #[inline]
@@ -351,7 +358,8 @@ impl DatastarHandler for DefaultDatastarHandler {
     
     #[inline]
     fn process(&self, key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
-        let data_key = key.replace("ds_", "data-").replace('_', "-");
+        let without_ds = &key[3..]; // Remove "ds_"
+        let data_key = transform_ds_key(without_ds);
         let datastar_value = DatastarValue::from_python(value)?;
         Ok((data_key, datastar_value))
     }
@@ -360,16 +368,44 @@ impl DatastarHandler for DefaultDatastarHandler {
     fn priority(&self) -> u8 { 1 }
 }
 
+/// Transform a ds_ key to the appropriate data-* attribute
+/// 
+/// For keyed plugins (attr, class, bind, signals, computed, style):
+///   ds_attr_title -> data-attr:title
+///   ds_computed_my_signal -> data-computed:my-signal
+/// 
+/// For non-keyed plugins:
+///   ds_text -> data-text
+///   ds_show -> data-show
+#[inline]
+fn transform_ds_key(key_without_ds: &str) -> String {
+    // Check if this starts with a keyed plugin prefix
+    for plugin in KEYED_PLUGINS {
+        let prefix = format!("{}_", plugin);
+        if key_without_ds.starts_with(&prefix) {
+            // Extract the key part after the plugin name
+            let key_part = &key_without_ds[prefix.len()..];
+            // Convert underscores to hyphens in the key part
+            let transformed_key = key_part.replace('_', "-");
+            return format!("data-{}:{}", plugin, transformed_key);
+        }
+    }
+    
+    // Non-keyed plugin - just convert underscores to hyphens
+    format!("data-{}", key_without_ds.replace('_', "-"))
+}
+
 /// Event key transformation with intelligent pattern detection
 /// 
 /// Transforms event keys according to Datastar specification:
+/// - Colon separates the plugin name from the event name
 /// - First __ separates base event from modifiers
 /// - In modifier section: __ stays as __ (separates modifiers), _ becomes . (within modifier)
 /// 
 /// Examples:
-/// - on_click__debounce_500ms -> data-on-click__debounce.500ms
-/// - on_click__window__throttle_1s -> data-on-click__window__throttle.1s
-/// - on_resize__throttle_500ms__noleading -> data-on-resize__throttle.500ms__noleading
+/// - on_click__debounce_500ms -> data-on:click__debounce.500ms
+/// - on_click__window__throttle_1s -> data-on:click__window__throttle.1s
+/// - on_resize__throttle_500ms__noleading -> data-on:resize__throttle.500ms__noleading
 #[inline]
 fn transform_event_key(event_part: &str) -> String {
     // Handle modifiers (after first __)
@@ -387,14 +423,14 @@ fn transform_event_key(event_part: &str) -> String {
             .replace('_', ".")          // Convert single _ to .
             .replace("§§", "__");       // Restore __
         
-        return format!("data-on-{}__{}",
+        return format!("data-on:{}__{}",
             base_event.replace('_', "-"),  // Event name: _ becomes -
             modifier
         );
     }
     
     // No modifiers - just convert underscores to hyphens
-    format!("data-on-{}", event_part.replace('_', "-"))
+    format!("data-on:{}", event_part.replace('_', "-"))
 }
 
 /// Map shorthand attribute names to their ds_ equivalents
