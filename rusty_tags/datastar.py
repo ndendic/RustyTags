@@ -831,12 +831,18 @@ Boolean = js("Boolean")
 
 
 def _normalize_data_key(key: str) -> str:
-    """Normalizes a Pythonic key to its `data-*` attribute equivalent."""
+    """Normalizes a Pythonic key to its `data-*` attribute equivalent.
+    
+    Uses colon separator for keyed plugins (Datastar v1.0+ syntax):
+    - data_computed_foo -> data-computed:foo
+    - data_on_click -> data-on:click
+    - data_attr_title -> data-attr:title
+    """
     for prefix in ("data_computed_", "data_on_", "data_attr_", "data_"):
         if key.startswith(prefix):
             name = key.removeprefix(prefix)
             slug = name if prefix == "data_computed_" else name.replace("_", "-")
-            return f"{prefix.removesuffix('_').replace('_', '-')}-{slug}"
+            return f"{prefix.removesuffix('_').replace('_', '-')}:{slug}"
     return key.replace("_", "-")
 
 
@@ -914,13 +920,16 @@ def _handle_data_signals(value: Any) -> Any:
 
 
 def _apply_additive_class_behavior(processed: dict) -> None:
-    """Combines cls and data_attr_cls for SSR + reactive classes."""
+    """Combines cls and data_attr_cls for SSR + reactive classes.
+    
+    Uses colon separator for Datastar v1.0+ syntax: data-attr:class
+    """
     if "cls" in processed and "data_attr_cls" in processed:
         base_classes = processed.pop("cls")
         reactive_classes = str(processed.pop("data_attr_cls"))
         if reactive_classes.startswith("(") and reactive_classes.endswith(")"):
             reactive_classes = reactive_classes[1:-1]
-        processed["data-attr-class"] = NotStr(f"`{base_classes} ${{{reactive_classes}}}`")
+        processed["data-attr:class"] = NotStr(f"`{base_classes} ${{{reactive_classes}}}`")
 
 
 
