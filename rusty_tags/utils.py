@@ -15,6 +15,7 @@ def Page(*content,
          htmlkw:dict|None=None,
          bodykw:dict|None=None,
          datastar: bool = True,
+         ds_version: str = "1.0.0-RC.6",
     ) -> HtmlString:
     """Simple page layout with basic HTML structure."""
     hdrs = hdrs if hdrs is not None else ()
@@ -26,7 +27,7 @@ def Page(*content,
         Head(
             Title(title),
             *hdrs,
-            Script(src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js", type="module") if datastar else fragment,
+            Script(src=f"https://cdn.jsdelivr.net/gh/starfederation/datastar@{ds_version}/bundles/datastar.js", type="module") if datastar else fragment,
         ),
         Body(
             *content,
