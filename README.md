@@ -601,7 +601,7 @@ print(f"Generated 1000 pages with 1000 paragraphs each in {time:.3f}s")
 
 **🐍 Python Layer** (`rusty_tags/`):
 - **Core Module** (`__init__.py`): All HTML/SVG tags and core types
-- **Utilities** (`utils.py`): Essential helpers (Page, create_template, page_template, show, AttrDict)
+- **Utilities** (`utils.py`): Essential helpers (Page, page_template, show, AttrDict)
 - **Datastar SDK** (`datastar.py`): Type-safe Signal system with Python operator overloading for reactive expressions
 - **Rust Extension**: Pre-compiled high-performance core with Datastar processing
 
@@ -627,7 +627,7 @@ RustyTags v0.6.0 represents a major architectural shift to focus on **core HTML 
 | All HTML/SVG tags | ✅ **Kept** | Complete tag system with Rust performance |
 | **Datastar SDK** | ✅ **Enhanced** | Type-safe `Signal` & `Signals` with full Python operator overloading |
 | `Page()` function | ✅ **Enhanced** | Simple templating with optional Datastar CDN |
-| `create_template()`, `page_template()` | ✅ **Kept** | Essential templating functions |
+| `page_template()`, `page_template()` | ✅ **Kept** | Essential templating functions |
 | `show()` Jupyter integration | ✅ **Kept** | Perfect for notebooks |
 | `AttrDict` utility | ✅ **Kept** | Flexible attribute access |
 
@@ -643,7 +643,7 @@ from rusty_tags.events import emit
 **After v0.6.0 (Enhanced Core):**
 ```python
 # Core HTML generation + Datastar SDK (RustyTags)
-from rusty_tags import Div, Page, create_template, Button, Input
+from rusty_tags import Div, Page, page_template, Button, Input
 from rusty_tags.datastar import Signal, Signals, if_, match, f, all, any
 from rusty_tags.datastar import post, get, put, patch, delete  # HTTP actions
 
@@ -710,11 +710,11 @@ form = Div(
 4. **Page Templates** (Minor changes):
 ```python
 # ✅ Still works in RustyTags Core
-from rusty_tags import Page, create_template
+from rusty_tags import Page, page_template
 
 # Basic templating stays the same
 page = Page(content, title="My App", datastar=True)
-template = create_template("My App", datastar=True)
+template = page_template("My App", datastar=True)
 
 # ❌ Advanced CDN features moved to Nitro
 # highlightjs=True, lucide=True parameters now in Nitro

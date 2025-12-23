@@ -12,7 +12,7 @@ RustyTags is a high-performance HTML generation library combining Rust-powered p
 
 **🐍 Python Layer (`rusty_tags/`)**: Modular API providing:
 - All HTML/SVG tags imported from Rust extension (circular import issue currently exists - import from `rusty_tags.rusty_tags` directly)
-- Template system with decorators (`utils.py`: `Page`, `create_template`)
+- Template system with decorators (`utils.py`: `Page`, `page_template`)
 - Datastar integration (`datastar.py`: `DS` action generators, `Signals`)
 - Event system (`events.py`: Enhanced Blinker with async support)
 - UI components (`xtras/`: accordion, dialog, tabs, sheet, sidebar)
@@ -52,7 +52,7 @@ python lab/FastapiApp.py  # Reference playground server
 ### Template System
 ```python
 # Page templates with decorators
-page = create_template("App Title", datastar=True, htmlkw={"lang": "en"})
+page = page_template("App Title", datastar=True, htmlkw={"lang": "en"})
 
 @page(wrap_in=HTMLResponse)
 def view_func():

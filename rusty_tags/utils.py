@@ -1,12 +1,43 @@
 from .core import CustomTag, Html, Head, Title, Body, HtmlString, Script
-from functools import partial
+from functools import partial, wraps
 from typing import Optional, Callable, TypeVar, ParamSpec
-from functools import wraps
+from asyncio import iscoroutinefunction
 
 P = ParamSpec("P")
 R = TypeVar("R")
 
 fragment = CustomTag("Fragment")
+
+def template(func):
+    func_is_async = iscoroutinefunction(func)
+    
+    def make_wrapper(inner, *args, **kwargs):
+        inner_is_async = iscoroutinefunction(inner)
+        
+        if func_is_async or inner_is_async:
+            @wraps(inner)
+            async def wrapped(*inner_args, **inner_kwargs):
+                content = await inner(*inner_args, **inner_kwargs) if inner_is_async else inner(*inner_args, **inner_kwargs)
+                return await func(content, *args, **kwargs) if func_is_async else func(content, *args, **kwargs)
+            return wrapped
+        else:
+            @wraps(inner)
+            def wrapped(*inner_args, **inner_kwargs):
+                content = inner(*inner_args, **inner_kwargs)
+                return func(content, *args, **kwargs)
+            return wrapped
+    
+    @wraps(func)
+    def decorator(*args, **kwargs):
+        if not args:
+            return lambda inner: make_wrapper(inner, **kwargs)
+        
+        if len(args) == 1 and callable(args[0]) and not kwargs:
+            return make_wrapper(args[0])
+        
+        return func(*args, **kwargs)
+    
+    return decorator
 
 def Page(*content,
          title: str = "RustyTags",
@@ -38,40 +69,6 @@ def Page(*content,
     )
 
 
-def create_template(page_title: str = "MyPage", 
-                    hdrs:Optional[tuple]=None,
-                    ftrs:Optional[tuple]=None, 
-                    htmlkw:Optional[dict]=None, 
-                    bodykw:Optional[dict]=None,
-                    datastar:bool=True,
-                    lucide:bool=True,
-                    highlightjs:bool=False,
-                    tailwind4:bool=False
-                    ):
-    """Create a decorator that wraps content in a Page layout.
-    
-    Returns a decorator function that can be used to wrap view functions.
-    The decorator will take the function's output and wrap it in the Page layout.
-    """
-    page_func = partial(Page, 
-                        hdrs=hdrs, 
-                        ftrs=ftrs, 
-                        htmlkw=htmlkw, 
-                        bodykw=bodykw, 
-                        datastar=datastar,
-                       )
-    def page(title: str|None = None, wrap_in: Callable|None = None):
-        def decorator(func: Callable[P, R]) -> Callable[P, R]:
-            @wraps(func) 
-            def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-                if wrap_in:
-                    return wrap_in(page_func(func(*args, **kwargs), title=title if title else page_title))
-                else:
-                    return page_func(func(*args, **kwargs), title=title if title else page_title)
-            return wrapper
-        return decorator
-    return page
-
 def page_template(
         page_title: str = "MyPage", 
         hdrs:Optional[tuple]=None,
@@ -85,16 +82,30 @@ def page_template(
     Returns a decorator function that can be used to wrap view functions.
     The decorator will take the function's output and wrap it in the Page layout.
     """
-    template = partial(Page, 
-                       hdrs=hdrs, 
-                       ftrs=ftrs, 
-                       htmlkw=htmlkw, 
-                       bodykw=bodykw, 
-                       title=page_title, 
-                       datastar=datastar
-                      )
-    return template
 
+    @template
+    def page(
+        *content,
+        title: str | None = None,
+        wrap_in: Callable | None = None,
+    ):
+        result = Page(
+            *content,
+            title=title if title else page_title,
+            hdrs=hdrs,
+            ftrs=ftrs,
+            htmlkw=htmlkw,
+            bodykw=bodykw,
+            datastar=datastar,
+        )
+        if wrap_in:
+            return wrap_in(result)
+        return result
+
+    return page
+
+# legacy function for backwards compatibility
+create_template = page_template
 
 def show(html: HtmlString):
     try:
