@@ -340,6 +340,41 @@ impl DatastarHandler for BindHandler {
     fn priority(&self) -> u8 { 90 }
 }
 
+/// Handler for data-on-keys plugin (keyboard shortcuts)
+///
+/// Transforms on_keys_* attributes to data-on-keys:* format.
+/// This plugin uses a different format than standard events:
+/// - on_keys_ctrl_k -> data-on-keys:ctrl-k (NOT data-on:keys-ctrl-k)
+/// - on_keys_enter__el -> data-on-keys:enter__el
+/// - on_keys -> data-on-keys (captures all keys)
+pub struct KeysEventHandler;
+
+impl DatastarHandler for KeysEventHandler {
+    #[inline]
+    fn can_handle(&self, key: &str) -> bool {
+        key == "ds_on_keys" || key.starts_with("ds_on_keys_")
+    }
+
+    #[inline]
+    fn process(&self, key: &str, value: &Bound<'_, pyo3::PyAny>) -> PyResult<(String, DatastarValue)> {
+        let datastar_value = DatastarValue::from_python(value)?;
+
+        // Handle bare "on_keys" (no key spec - captures all keys)
+        if key == "ds_on_keys" {
+            return Ok(("data-on-keys".to_string(), datastar_value));
+        }
+
+        // Extract part after "ds_on_keys_"
+        let key_part = &key[11..]; // e.g., "ctrl_k" or "enter__el__throttle_1s"
+
+        let data_key = transform_keys_event(key_part);
+        Ok((data_key, datastar_value))
+    }
+
+    #[inline]
+    fn priority(&self) -> u8 { 85 } // Higher than EventHandler (80)
+}
+
 /// Default fallback handler for any ds_* attribute
 /// 
 /// Handles keyed plugins with colon syntax (data-plugin:key) and
@@ -431,6 +466,37 @@ fn transform_event_key(event_part: &str) -> String {
     
     // No modifiers - just convert underscores to hyphens
     format!("data-on:{}", event_part.replace('_', "-"))
+}
+
+/// Transform key event key for the data-on-keys plugin
+///
+/// This handles the special syntax for the on-keys plugin where:
+/// - on_keys_ctrl_k -> data-on-keys:ctrl-k
+/// - on_keys_enter__el -> data-on-keys:enter__el
+/// - on_keys_space__throttle_1s -> data-on-keys:space__throttle.1s
+#[inline]
+fn transform_keys_event(key_part: &str) -> String {
+    // Handle modifiers (after first __)
+    if let Some(double_pos) = key_part.find("__") {
+        let key_spec = &key_part[..double_pos];
+        let modifier_part = &key_part[double_pos + 2..]; // Skip the first __
+
+        // Key spec: _ becomes -
+        let transformed_key = key_spec.replace('_', "-");
+
+        // Modifier part: same rules as other events
+        // - Keep __ as __ (separator between modifiers)
+        // - Convert single _ to . (separator within modifier values)
+        let modifier = modifier_part
+            .replace("__", "\x00\x00")  // Protect __ temporarily
+            .replace('_', ".")          // Convert single _ to .
+            .replace("\x00\x00", "__"); // Restore __
+
+        format!("data-on-keys:{}__{}", transformed_key, modifier)
+    } else {
+        // No modifiers - just convert underscores to hyphens in key spec
+        format!("data-on-keys:{}", key_part.replace('_', "-"))
+    }
 }
 
 /// Map shorthand attribute names to their ds_ equivalents
@@ -579,6 +645,7 @@ impl DatastarProcessor {
             Box::new(SignalsHandler),
             Box::new(ClassHandler),
             Box::new(BindHandler), // Handle data-bind attribute (strips $)
+            Box::new(KeysEventHandler), // Handle data-on-keys plugin (priority 85)
             Box::new(EventHandler), // Generic event handler with modifier support
             Box::new(DefaultDatastarHandler), // Fallback handler (lowest priority)
         ];

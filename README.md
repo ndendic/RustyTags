@@ -440,6 +440,47 @@ user_profile = Div(
 )
 ```
 
+#### Keyboard Shortcuts with data-on-keys Plugin
+
+RustyTags supports the [data-on-keys](https://mbolli.github.io/datastar-attribute-on-keys/) Datastar plugin for handling keyboard shortcuts:
+
+```python
+from rusty_tags import Div, Input, Button
+
+# Global keyboard shortcuts (window-scoped)
+shortcuts = Div(
+    "Press Ctrl+K to search, Escape to close",
+    on_keys_ctrl_k="openSearch()",           # → data-on-keys:ctrl-k
+    on_keys_escape="closeModal()",           # → data-on-keys:escape
+    on_keys_ctrl_s="saveDocument()",         # → data-on-keys:ctrl-s
+    on_keys_f1="showHelp()",                 # → data-on-keys:f1
+)
+
+# Element-scoped shortcuts (requires focus)
+search_input = Input(
+    type="text",
+    placeholder="Search...",
+    on_keys_enter__el="submitSearch()",      # → data-on-keys:enter__el
+    on_keys_escape__el="clearInput()",       # → data-on-keys:escape__el
+)
+
+# With timing modifiers
+throttled = Div(
+    on_keys_space__throttle_1s="$counter++",           # → data-on-keys:space__throttle.1s
+    on_keys_ctrl_s__debounce_500ms="saveDocument()",   # → data-on-keys:ctrl-s__debounce.500ms
+)
+
+# Capture all keys
+keylogger = Div(on_keys="console.log($event.key)")     # → data-on-keys
+```
+
+**Supported modifiers:**
+- `__el` - Element-scoped (requires focus)
+- `__stop` - Stop event propagation
+- `__noprevent` - Allow default browser behavior
+- `__throttle_Xs` - Throttle execution (e.g., `__throttle_1s`)
+- `__debounce_Xms` - Debounce execution (e.g., `__debounce_500ms`)
+
 **Complete Datastar SDK Features:**
 - **Type-Safe Signals**: `Signal` and `Signals` classes with automatic type inference
 - **Python Operators**: Full operator overloading (`+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `>`, `<=`, `>=`, `&`, `|`, `~`)
@@ -452,6 +493,7 @@ user_profile = Div(
 - **Dynamic Classes**: `collect()` for joining, `classes()` for object literals
 - **Validation**: `all()` and `any()` for logical aggregation
 - **HTTP Actions**: `get()`, `post()`, `put()`, `patch()`, `delete()` action generators
+- **Keyboard Shortcuts**: `on_keys_*` for the data-on-keys plugin with modifier support
 - **Raw JavaScript**: `js()` function for raw JavaScript when needed
 - **Property Access**: Natural Python syntax for nested object properties
 
