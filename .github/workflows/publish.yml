@@ -73,8 +73,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: CI.yml
           workflow_conclusion: success
-          name: wheels-macos-x86_64
-          path: artifacts/macos-x86_64
+          name: wheels-macos-aarch64
+          path: artifacts/macos-aarch64
 
       - name: Download sdist
         uses: dawidd6/action-download-artifact@v3
