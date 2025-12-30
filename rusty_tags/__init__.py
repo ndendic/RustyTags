@@ -5,7 +5,7 @@ from .utils import Page, show, template, create_template, page_template, AttrDic
 RustyTags - High-performance HTML generation library
 
 A Rust-based Python extension for building HTML/SVG tags with optimized performance.
-Core library focused on fast HTML generation - see 'nitro' package for web framework features.
+Core library focused on fast HTML generation - see 'nitro' package for abstraction layers for Python web development.
 """
 
 from .core import (  # noqa: E402

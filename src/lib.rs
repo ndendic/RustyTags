@@ -523,6 +523,32 @@ fn map_shorthand_attribute(key: &str) -> Option<String> {
         key if key.starts_with("on_") => {
             Some(format!("ds_{}", key))
         },
+
+        // Keyed plugin shorthand attributes - support both data_attr_* and attr_* patterns
+        // attr_* -> ds_attr_* (e.g., attr_title -> ds_attr_title -> data-attr:title)
+        key if key.starts_with("attr_") => {
+            Some(format!("ds_{}", key))
+        },
+        // data_attr_* -> ds_attr_* (e.g., data_attr_aria_hidden -> ds_attr_aria_hidden -> data-attr:aria-hidden)
+        key if key.starts_with("data_attr_") => {
+            Some(format!("ds_attr_{}", &key[10..]))  // Strip "data_attr_" prefix, add "ds_attr_"
+        },
+        // data_class_* -> ds_class_* (e.g., data_class_hidden -> ds_class_hidden -> data-class:hidden)
+        key if key.starts_with("data_class_") => {
+            Some(format!("ds_class_{}", &key[11..]))  // Strip "data_class_" prefix
+        },
+        // data_computed_* -> ds_computed_*
+        key if key.starts_with("data_computed_") => {
+            Some(format!("ds_computed_{}", &key[14..]))  // Strip "data_computed_" prefix
+        },
+        // data_style_* -> ds_style_*
+        key if key.starts_with("data_style_") => {
+            Some(format!("ds_style_{}", &key[11..]))  // Strip "data_style_" prefix
+        },
+        // data_signals_* -> ds_signals_*
+        key if key.starts_with("data_signals_") => {
+            Some(format!("ds_signals_{}", &key[13..]))  // Strip "data_signals_" prefix
+        },
         
         // Pro/Advanced attributes (lower priority but included for completeness)
         "persist" => Some("ds_persist".to_string()),
