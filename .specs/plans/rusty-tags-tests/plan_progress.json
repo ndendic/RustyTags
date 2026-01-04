@@ -1,0 +1,1573 @@
+[
+  {
+    "phase": "P1",
+    "feature": "html-basic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test basic HTML tag generation (Div, Span, P, etc.) with text content",
+    "steps": [
+      "Step 1: Import Div, Span, P from rusty_tags",
+      "Step 2: Create elements with simple text content",
+      "Step 3: Convert to string and verify output",
+      "Step 4: Assert correct tag names and content"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-basic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test HTML tags with single string attribute (id, class)",
+    "steps": [
+      "Step 1: Create Div with id attribute",
+      "Step 2: Create Div with cls attribute",
+      "Step 3: Verify id renders as id attribute",
+      "Step 4: Verify cls renders as class attribute"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-basic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test HTML tags with multiple attributes",
+    "steps": [
+      "Step 1: Create Input with type, name, value, placeholder",
+      "Step 2: Convert to string",
+      "Step 3: Verify all attributes present in output",
+      "Step 4: Verify attribute values are correctly quoted"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-basic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test HTML tags with boolean attributes (required, disabled, checked)",
+    "steps": [
+      "Step 1: Create Input with required=True",
+      "Step 2: Create Input with disabled=True",
+      "Step 3: Create Input with checked=True",
+      "Step 4: Verify boolean attributes render without values",
+      "Step 5: Create Input with required=False",
+      "Step 6: Verify False boolean attributes are omitted"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-basic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test HTML tags with nested children",
+    "steps": [
+      "Step 1: Create nested Div(Div(Div('content')))",
+      "Step 2: Convert to string",
+      "Step 3: Verify proper nesting in output",
+      "Step 4: Verify all tags are properly closed"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-basic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test HTML tags with multiple children",
+    "steps": [
+      "Step 1: Create Div with multiple P children",
+      "Step 2: Convert to string",
+      "Step 3: Verify all children present in order",
+      "Step 4: Verify proper tag structure"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-basic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test HTML tags with mixed text and element children",
+    "steps": [
+      "Step 1: Create Div('text', Span('inner'), 'more text')",
+      "Step 2: Convert to string",
+      "Step 3: Verify text nodes preserved",
+      "Step 4: Verify element nodes preserved",
+      "Step 5: Verify order maintained"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-basic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test HTML tags with numeric children (integers and floats)",
+    "steps": [
+      "Step 1: Create Div(42)",
+      "Step 2: Create Div(3.14)",
+      "Step 3: Verify numbers converted to strings",
+      "Step 4: Verify float precision maintained"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-basic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test HTML tags with None children (should be ignored)",
+    "steps": [
+      "Step 1: Create Div('before', None, 'after')",
+      "Step 2: Convert to string",
+      "Step 3: Verify None is ignored",
+      "Step 4: Verify other content preserved"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-basic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test HTML tags with empty content",
+    "steps": [
+      "Step 1: Create Div()",
+      "Step 2: Convert to string",
+      "Step 3: Verify proper empty element output <div></div>"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-heading-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test all heading tags H1-H6",
+    "steps": [
+      "Step 1: Create H1('Heading 1') through H6('Heading 6')",
+      "Step 2: Verify each renders with correct tag name",
+      "Step 3: Verify heading content preserved"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-form-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test Form with method and action attributes",
+    "steps": [
+      "Step 1: Create Form with method='post', action='/submit'",
+      "Step 2: Add Input and Button children",
+      "Step 3: Verify form attributes rendered",
+      "Step 4: Verify children rendered inside form"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-form-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test Input types (text, email, password, number, checkbox, radio)",
+    "steps": [
+      "Step 1: Create Input for each type",
+      "Step 2: Verify type attribute rendered correctly",
+      "Step 3: Verify name attributes work",
+      "Step 4: Verify value attributes work"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-form-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test Select and Option elements",
+    "steps": [
+      "Step 1: Create Select with Option children",
+      "Step 2: Verify Select renders as select tag",
+      "Step 3: Verify Option (OptionEl) renders as option tag",
+      "Step 4: Verify selected attribute works"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-form-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test Textarea with content and attributes",
+    "steps": [
+      "Step 1: Create Textarea with rows and cols",
+      "Step 2: Create Textarea with text content",
+      "Step 3: Verify attributes rendered",
+      "Step 4: Verify content inside textarea tags"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-form-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test Label with for attribute mapping",
+    "steps": [
+      "Step 1: Create Label with _for='input-id'",
+      "Step 2: Create Label with fr='input-id'",
+      "Step 3: Verify both render as for attribute"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-table-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test Table structure (Table, Thead, Tbody, Tfoot, Tr, Th, Td)",
+    "steps": [
+      "Step 1: Create complete table with all parts",
+      "Step 2: Verify proper nesting",
+      "Step 3: Verify all tags rendered correctly",
+      "Step 4: Verify colspan and rowspan attributes"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-list-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test Ul, Ol, and Li elements",
+    "steps": [
+      "Step 1: Create Ul with Li children",
+      "Step 2: Create Ol with Li children",
+      "Step 3: Verify list type rendered correctly",
+      "Step 4: Verify list items rendered"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-semantic-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test semantic HTML5 tags (Header, Footer, Nav, Main, Article, Section, Aside)",
+    "steps": [
+      "Step 1: Create each semantic tag with content",
+      "Step 2: Verify tag names rendered correctly",
+      "Step 3: Verify content preserved"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-media-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test media tags (Img, Audio, Video, Source, Track)",
+    "steps": [
+      "Step 1: Create Img with src and alt",
+      "Step 2: Create Video with Source children",
+      "Step 3: Create Audio with controls attribute",
+      "Step 4: Verify all media attributes rendered"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-document-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test Html tag with DOCTYPE and structure",
+    "steps": [
+      "Step 1: Create Html(Head(Title('Test')), Body('content'))",
+      "Step 2: Verify DOCTYPE added",
+      "Step 3: Verify html tag structure",
+      "Step 4: Verify Head and Body rendered"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-document-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test Meta tag with various attributes",
+    "steps": [
+      "Step 1: Create Meta(charset='utf-8')",
+      "Step 2: Create Meta(name='viewport', content='...')",
+      "Step 3: Verify meta tag rendered correctly"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-document-tags",
+    "spec": "P1-01-HtmlBasicTags.md",
+    "category": "functional",
+    "description": "Test Link and Script tags",
+    "steps": [
+      "Step 1: Create Link with rel and href",
+      "Step 2: Create Script with src",
+      "Step 3: Create Script with inline content",
+      "Step 4: Verify all attributes rendered"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "svg-basic-tags",
+    "spec": "P1-02-SvgTags.md",
+    "category": "functional",
+    "description": "Test SVG container with viewBox and dimensions",
+    "steps": [
+      "Step 1: Create Svg with width, height, viewBox",
+      "Step 2: Add shape children",
+      "Step 3: Verify svg tag rendered",
+      "Step 4: Verify viewBox attribute preserved"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P1",
+    "feature": "svg-basic-tags",
+    "spec": "P1-02-SvgTags.md",
+    "category": "functional",
+    "description": "Test SVG shapes (Circle, Rect, Ellipse, Line, Polygon, Polyline, Path)",
+    "steps": [
+      "Step 1: Create Circle with cx, cy, r, fill",
+      "Step 2: Create Rect with x, y, width, height",
+      "Step 3: Create Line with x1, y1, x2, y2",
+      "Step 4: Create Path with d attribute",
+      "Step 5: Create Polygon with points",
+      "Step 6: Create Polyline with points",
+      "Step 7: Create Ellipse with cx, cy, rx, ry",
+      "Step 8: Verify all shapes rendered with attributes"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P1",
+    "feature": "svg-basic-tags",
+    "spec": "P1-02-SvgTags.md",
+    "category": "functional",
+    "description": "Test SVG grouping and reuse (G, Defs, Use, Symbol)",
+    "steps": [
+      "Step 1: Create G with transform attribute",
+      "Step 2: Create Defs with gradient definition",
+      "Step 3: Create Symbol with viewBox",
+      "Step 4: Create Use with href reference",
+      "Step 5: Verify all elements rendered"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P1",
+    "feature": "svg-basic-tags",
+    "spec": "P1-02-SvgTags.md",
+    "category": "functional",
+    "description": "Test SVG gradients (LinearGradient, RadialGradient, Stop)",
+    "steps": [
+      "Step 1: Create LinearGradient with Stop children",
+      "Step 2: Create RadialGradient with Stop children",
+      "Step 3: Verify gradient attributes (x1, y1, x2, y2)",
+      "Step 4: Verify stop attributes (offset, stop-color)"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P1",
+    "feature": "svg-basic-tags",
+    "spec": "P1-02-SvgTags.md",
+    "category": "functional",
+    "description": "Test SVG Text element",
+    "steps": [
+      "Step 1: Create Text with x, y, and content",
+      "Step 2: Verify text content preserved",
+      "Step 3: Verify position attributes"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P1",
+    "feature": "special-tags",
+    "spec": "P1-03-SpecialTags.md",
+    "category": "functional",
+    "description": "Test Fragment renders children without wrapper",
+    "steps": [
+      "Step 1: Create Fragment(Div('a'), Div('b'))",
+      "Step 2: Verify no wrapper element",
+      "Step 3: Verify children rendered directly"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P1",
+    "feature": "special-tags",
+    "spec": "P1-03-SpecialTags.md",
+    "category": "functional",
+    "description": "Test Safe escapes HTML characters",
+    "steps": [
+      "Step 1: Create Safe('<script>alert()</script>')",
+      "Step 2: Verify < becomes &lt;",
+      "Step 3: Verify > becomes &gt;",
+      "Step 4: Verify & becomes &amp;",
+      "Step 5: Verify quotes are escaped"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P1",
+    "feature": "special-tags",
+    "spec": "P1-03-SpecialTags.md",
+    "category": "functional",
+    "description": "Test CustomTag creates arbitrary tags",
+    "steps": [
+      "Step 1: Create CustomTag('custom-element', 'content', cls='test')",
+      "Step 2: Verify tag name rendered",
+      "Step 3: Verify attributes work",
+      "Step 4: Verify content rendered"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P1",
+    "feature": "attribute-mapping",
+    "spec": "P1-04-AttributeMapping.md",
+    "category": "functional",
+    "description": "Test cls/class attribute mapping",
+    "steps": [
+      "Step 1: Create Div(cls='test')",
+      "Step 2: Create Div(_class='test')",
+      "Step 3: Create Div(klass='test')",
+      "Step 4: Verify all render as class attribute"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "attribute-mapping",
+    "spec": "P1-04-AttributeMapping.md",
+    "category": "functional",
+    "description": "Test for attribute mapping (_for, fr, htmlFor)",
+    "steps": [
+      "Step 1: Create Label(_for='input-id')",
+      "Step 2: Create Label(fr='input-id')",
+      "Step 3: Create Label(htmlFor='input-id')",
+      "Step 4: Verify all render as for attribute"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "attribute-mapping",
+    "spec": "P1-04-AttributeMapping.md",
+    "category": "functional",
+    "description": "Test underscore to hyphen conversion in attribute names",
+    "steps": [
+      "Step 1: Create Div(data_test='value')",
+      "Step 2: Verify renders as data-test",
+      "Step 3: Create Div(aria_label='label')",
+      "Step 4: Verify renders as aria-label"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "attribute-mapping",
+    "spec": "P1-04-AttributeMapping.md",
+    "category": "functional",
+    "description": "Test type attribute mapping (type_)",
+    "steps": [
+      "Step 1: Create Input(type_='text')",
+      "Step 2: Verify renders as type attribute"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "dict-as-attrs",
+    "spec": "P1-05-DictAsAttrs.md",
+    "category": "functional",
+    "description": "Test dictionary as positional argument expands to attributes",
+    "steps": [
+      "Step 1: Create Div('content', {'id': 'test', 'class': 'demo'})",
+      "Step 2: Verify id and class attributes rendered",
+      "Step 3: Verify content preserved"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "dict-as-attrs",
+    "spec": "P1-05-DictAsAttrs.md",
+    "category": "functional",
+    "description": "Test nested dictionary attributes",
+    "steps": [
+      "Step 1: Create element with nested dict containing data attributes",
+      "Step 2: Verify nested dicts expanded correctly"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-protocol",
+    "spec": "P1-06-HtmlProtocol.md",
+    "category": "functional",
+    "description": "Test __html__ protocol for custom objects",
+    "steps": [
+      "Step 1: Create class with __html__ method",
+      "Step 2: Pass instance as child to Div",
+      "Step 3: Verify __html__() output used"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-protocol",
+    "spec": "P1-06-HtmlProtocol.md",
+    "category": "functional",
+    "description": "Test _repr_html_ protocol for Jupyter objects",
+    "steps": [
+      "Step 1: Create class with _repr_html_ method",
+      "Step 2: Pass instance as child to Div",
+      "Step 3: Verify _repr_html_() output used"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P1",
+    "feature": "html-protocol",
+    "spec": "P1-06-HtmlProtocol.md",
+    "category": "functional",
+    "description": "Test render protocol for template objects",
+    "steps": [
+      "Step 1: Create class with render method",
+      "Step 2: Pass instance as child to Div",
+      "Step 3: Verify render() output used"
+    ],
+    "passes": false
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-on-events",
+    "spec": "P2-01-DatastarEvents.md",
+    "category": "functional",
+    "description": "Test on_click generates data-on:click with colon syntax",
+    "steps": [
+      "Step 1: Create Div(on_click='$count++')",
+      "Step 2: Verify output contains data-on:click",
+      "Step 3: Verify expression preserved"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-on-events",
+    "spec": "P2-01-DatastarEvents.md",
+    "category": "functional",
+    "description": "Test on_event with underscore becomes hyphen in event name",
+    "steps": [
+      "Step 1: Create Div(on_custom_event='handler()')",
+      "Step 2: Verify output contains data-on:custom-event"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-on-events",
+    "spec": "P2-01-DatastarEvents.md",
+    "category": "functional",
+    "description": "Test event modifiers (debounce, throttle) with double underscore",
+    "steps": [
+      "Step 1: Create Input(on_input__debounce_500ms='search()')",
+      "Step 2: Verify output contains data-on:input__debounce.500ms",
+      "Step 3: Create Div(on_click__throttle_1s='action()')",
+      "Step 4: Verify throttle modifier preserved"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-on-events",
+    "spec": "P2-01-DatastarEvents.md",
+    "category": "functional",
+    "description": "Test multiple event modifiers (window, throttle combined)",
+    "steps": [
+      "Step 1: Create Div(on_click__window__throttle_1s='global()')",
+      "Step 2: Verify both modifiers present",
+      "Step 3: Verify colon syntax used"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-on-keys",
+    "spec": "P2-02-DatastarKeys.md",
+    "category": "functional",
+    "description": "Test on_keys_* generates data-on-keys plugin syntax",
+    "steps": [
+      "Step 1: Create Div(on_keys_escape='close()')",
+      "Step 2: Verify data-on-keys:escape in output",
+      "Step 3: Verify NOT data-on:keys-escape"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-on-keys",
+    "spec": "P2-02-DatastarKeys.md",
+    "category": "functional",
+    "description": "Test keyboard combinations (ctrl_k, alt_enter, meta_s)",
+    "steps": [
+      "Step 1: Create Div(on_keys_ctrl_k='search()')",
+      "Step 2: Verify data-on-keys:ctrl-k",
+      "Step 3: Create Div(on_keys_alt_enter='newline()')",
+      "Step 4: Verify data-on-keys:alt-enter"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-on-keys",
+    "spec": "P2-02-DatastarKeys.md",
+    "category": "functional",
+    "description": "Test on_keys with element scoped modifier (__el)",
+    "steps": [
+      "Step 1: Create Input(on_keys_enter__el='submit()')",
+      "Step 2: Verify data-on-keys:enter__el in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-on-keys",
+    "spec": "P2-02-DatastarKeys.md",
+    "category": "functional",
+    "description": "Test on_keys with timing modifiers",
+    "steps": [
+      "Step 1: Create Div(on_keys_space__throttle_1s='action()')",
+      "Step 2: Verify data-on-keys:space__throttle.1s",
+      "Step 3: Note: single underscore becomes dot in modifier value"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-on-keys",
+    "spec": "P2-02-DatastarKeys.md",
+    "category": "functional",
+    "description": "Test bare on_keys captures all keys",
+    "steps": [
+      "Step 1: Create Div(on_keys='logKey($event)')",
+      "Step 2: Verify data-on-keys (no colon, no key spec)"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-bind",
+    "spec": "P2-03-DatastarBind.md",
+    "category": "functional",
+    "description": "Test bind shorthand attribute",
+    "steps": [
+      "Step 1: Create Input(bind='username')",
+      "Step 2: Verify data-bind='username' in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-bind",
+    "spec": "P2-03-DatastarBind.md",
+    "category": "functional",
+    "description": "Test bind strips $ from signal reference",
+    "steps": [
+      "Step 1: Create Input(bind='$username')",
+      "Step 2: Verify data-bind='username' ($ stripped)"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-bind",
+    "spec": "P2-03-DatastarBind.md",
+    "category": "functional",
+    "description": "Test ds_bind keyed syntax",
+    "steps": [
+      "Step 1: Create Input(ds_bind_username='')",
+      "Step 2: Verify data-bind:username in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-signals",
+    "spec": "P2-04-DatastarSignals.md",
+    "category": "functional",
+    "description": "Test signals attribute with dictionary",
+    "steps": [
+      "Step 1: Create Div(signals={'count': 0, 'name': 'test'})",
+      "Step 2: Verify data-signals attribute present",
+      "Step 3: Verify JSON-like format with single quotes"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-signals",
+    "spec": "P2-04-DatastarSignals.md",
+    "category": "functional",
+    "description": "Test ds_signals attribute",
+    "steps": [
+      "Step 1: Create Div(ds_signals={'value': 42})",
+      "Step 2: Verify data-signals attribute rendered"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-signals",
+    "spec": "P2-04-DatastarSignals.md",
+    "category": "functional",
+    "description": "Test data_signals_* keyed syntax",
+    "steps": [
+      "Step 1: Create Div(data_signals_count='0')",
+      "Step 2: Verify data-signals:count='0' in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-class",
+    "spec": "P2-05-DatastarClass.md",
+    "category": "functional",
+    "description": "Test reactive class with dictionary value",
+    "steps": [
+      "Step 1: Create Div(cls={'active': '$isActive'})",
+      "Step 2: Verify data-class attribute rendered"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-class",
+    "spec": "P2-05-DatastarClass.md",
+    "category": "functional",
+    "description": "Test data_class_* keyed syntax",
+    "steps": [
+      "Step 1: Create Div(data_class_hidden='$isHidden')",
+      "Step 2: Verify data-class:hidden in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-attr",
+    "spec": "P2-06-DatastarAttr.md",
+    "category": "functional",
+    "description": "Test ds_attr_* attribute binding",
+    "steps": [
+      "Step 1: Create Div(ds_attr_title='$tooltip')",
+      "Step 2: Verify data-attr:title in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-attr",
+    "spec": "P2-06-DatastarAttr.md",
+    "category": "functional",
+    "description": "Test attr_* shorthand attribute",
+    "steps": [
+      "Step 1: Create Button(attr_disabled='$isLoading')",
+      "Step 2: Verify data-attr:disabled in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-attr",
+    "spec": "P2-06-DatastarAttr.md",
+    "category": "functional",
+    "description": "Test data_attr_* mapping",
+    "steps": [
+      "Step 1: Create Div(data_attr_aria_hidden='$isHidden')",
+      "Step 2: Verify data-attr:aria-hidden in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-other",
+    "spec": "P2-07-DatastarOther.md",
+    "category": "functional",
+    "description": "Test data-text attribute (ds_text, text shorthand)",
+    "steps": [
+      "Step 1: Create Span(text='$message')",
+      "Step 2: Verify data-text in output",
+      "Step 3: Create Span(ds_text='$value')",
+      "Step 4: Verify data-text in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-other",
+    "spec": "P2-07-DatastarOther.md",
+    "category": "functional",
+    "description": "Test data-show attribute",
+    "steps": [
+      "Step 1: Create Div(show='$isVisible')",
+      "Step 2: Verify data-show in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-other",
+    "spec": "P2-07-DatastarOther.md",
+    "category": "functional",
+    "description": "Test data-computed keyed syntax",
+    "steps": [
+      "Step 1: Create Div(ds_computed_total='$price * $qty')",
+      "Step 2: Verify data-computed:total in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-other",
+    "spec": "P2-07-DatastarOther.md",
+    "category": "functional",
+    "description": "Test data-style keyed syntax",
+    "steps": [
+      "Step 1: Create Span(ds_style_color='$textColor')",
+      "Step 2: Verify data-style:color in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-other",
+    "spec": "P2-07-DatastarOther.md",
+    "category": "functional",
+    "description": "Test data-effect attribute",
+    "steps": [
+      "Step 1: Create Div(effect='console.log($count)')",
+      "Step 2: Verify data-effect in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-expression-detection",
+    "spec": "P2-08-ExpressionDetection.md",
+    "category": "functional",
+    "description": "Test expression detection for signal references ($)",
+    "steps": [
+      "Step 1: Create Div(text='$counter')",
+      "Step 2: Verify $counter preserved as expression"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-expression-detection",
+    "spec": "P2-08-ExpressionDetection.md",
+    "category": "functional",
+    "description": "Test expression detection for action references (@)",
+    "steps": [
+      "Step 1: Create Button(on_click=\"@get('/api/data')\")",
+      "Step 2: Verify @get preserved as expression"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P2",
+    "feature": "datastar-expression-detection",
+    "spec": "P2-08-ExpressionDetection.md",
+    "category": "functional",
+    "description": "Test expression detection for JavaScript operators",
+    "steps": [
+      "Step 1: Create element with === operator",
+      "Step 2: Create element with && operator",
+      "Step 3: Verify both treated as expressions"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signal-class",
+    "spec": "P3-01-SignalClass.md",
+    "category": "functional",
+    "description": "Test Signal creation and to_js() output",
+    "steps": [
+      "Step 1: Create Signal('count', 0)",
+      "Step 2: Verify to_js() returns '$count'",
+      "Step 3: Verify str() returns '$count'"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signal-class",
+    "spec": "P3-01-SignalClass.md",
+    "category": "functional",
+    "description": "Test Signal to_dict() for signals attribute",
+    "steps": [
+      "Step 1: Create Signal('name', 'value')",
+      "Step 2: Call to_dict()",
+      "Step 3: Verify returns {'name': 'value'}"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signal-class",
+    "spec": "P3-01-SignalClass.md",
+    "category": "functional",
+    "description": "Test Signal with namespace",
+    "steps": [
+      "Step 1: Create Signal('count', 0, namespace='app')",
+      "Step 2: Verify to_js() returns '$app.count'"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signals-class",
+    "spec": "P3-02-SignalsClass.md",
+    "category": "functional",
+    "description": "Test Signals class creation and attribute access",
+    "steps": [
+      "Step 1: Create Signals(counter=0, name='test')",
+      "Step 2: Access signals.counter",
+      "Step 3: Verify returns Signal object",
+      "Step 4: Verify to_dict() returns original values"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signals-class",
+    "spec": "P3-02-SignalsClass.md",
+    "category": "functional",
+    "description": "Test Signals with namespace",
+    "steps": [
+      "Step 1: Create Signals(count=0, namespace='form')",
+      "Step 2: Access signals.count",
+      "Step 3: Verify to_js() returns '$form.count'"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "expr-arithmetic",
+    "spec": "P3-03-ExprOperators.md",
+    "category": "functional",
+    "description": "Test arithmetic operators on Signal (+, -, *, /, %)",
+    "steps": [
+      "Step 1: Create signals.x + signals.y",
+      "Step 2: Verify to_js() returns '($x + $y)'",
+      "Step 3: Test subtraction, multiplication, division, modulo",
+      "Step 4: Verify all operators work correctly"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "expr-comparison",
+    "spec": "P3-03-ExprOperators.md",
+    "category": "functional",
+    "description": "Test comparison operators (==, !=, <, >, <=, >=)",
+    "steps": [
+      "Step 1: Create signals.count == 0",
+      "Step 2: Verify to_js() returns '($count === 0)'",
+      "Step 3: Test all comparison operators",
+      "Step 4: Verify JavaScript equivalents used"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "expr-logical",
+    "spec": "P3-03-ExprOperators.md",
+    "category": "functional",
+    "description": "Test logical operators (&, |, ~)",
+    "steps": [
+      "Step 1: Create (sig1) & (sig2)",
+      "Step 2: Verify to_js() uses &&",
+      "Step 3: Create (sig1) | (sig2)",
+      "Step 4: Verify to_js() uses ||",
+      "Step 5: Create ~sig1",
+      "Step 6: Verify to_js() uses !"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signal-methods",
+    "spec": "P3-04-SignalMethods.md",
+    "category": "functional",
+    "description": "Test Signal.set() method",
+    "steps": [
+      "Step 1: Create signal.set(10)",
+      "Step 2: Verify to_js() returns '$signal = 10'"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signal-methods",
+    "spec": "P3-04-SignalMethods.md",
+    "category": "functional",
+    "description": "Test Signal.add() and sub() methods",
+    "steps": [
+      "Step 1: Create signal.add(1)",
+      "Step 2: Verify to_js() returns '$signal++'",
+      "Step 3: Create signal.add(5)",
+      "Step 4: Verify to_js() returns '$signal = ($signal + 5)'",
+      "Step 5: Test sub() similarly"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signal-methods",
+    "spec": "P3-04-SignalMethods.md",
+    "category": "functional",
+    "description": "Test Signal.toggle() method",
+    "steps": [
+      "Step 1: Create bool_signal.toggle()",
+      "Step 2: Verify negation expression generated"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signal-string-methods",
+    "spec": "P3-05-StringMethods.md",
+    "category": "functional",
+    "description": "Test string methods (upper, lower, strip, contains, length)",
+    "steps": [
+      "Step 1: Create signal.upper()",
+      "Step 2: Verify to_js() returns '$signal.toUpperCase()'",
+      "Step 3: Test lower() -> toLowerCase()",
+      "Step 4: Test strip() -> trim()",
+      "Step 5: Test contains('x') -> includes('x')",
+      "Step 6: Test .length property"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signal-array-methods",
+    "spec": "P3-06-ArrayMethods.md",
+    "category": "functional",
+    "description": "Test array methods (append, pop, remove, join, slice)",
+    "steps": [
+      "Step 1: Create signal.append('item')",
+      "Step 2: Verify to_js() returns '$signal.push(item)'",
+      "Step 3: Test pop() -> pop()",
+      "Step 4: Test remove(idx) -> splice()",
+      "Step 5: Test join(',') -> join(',')",
+      "Step 6: Test slice(0, 5)"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "signal-math-methods",
+    "spec": "P3-07-MathMethods.md",
+    "category": "functional",
+    "description": "Test math methods (round, abs, min, max, clamp)",
+    "steps": [
+      "Step 1: Create signal.round()",
+      "Step 2: Verify to_js() returns 'Math.round($signal)'",
+      "Step 3: Test round(2) for decimal places",
+      "Step 4: Test abs() -> Math.abs()",
+      "Step 5: Test min(5) -> Math.min()",
+      "Step 6: Test max(10) -> Math.max()",
+      "Step 7: Test clamp(0, 10)"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "conditional-helpers",
+    "spec": "P3-08-Conditionals.md",
+    "category": "functional",
+    "description": "Test if_() conditional helper",
+    "steps": [
+      "Step 1: Create if_(signal >= 90, 'A', 'B')",
+      "Step 2: Verify ternary expression generated",
+      "Step 3: Test nested if_() calls"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "conditional-helpers",
+    "spec": "P3-08-Conditionals.md",
+    "category": "functional",
+    "description": "Test match() pattern matching helper",
+    "steps": [
+      "Step 1: Create match(signal, idle='Ready', loading='...')",
+      "Step 2: Verify chained ternary generated",
+      "Step 3: Test default value"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "conditional-helpers",
+    "spec": "P3-08-Conditionals.md",
+    "category": "functional",
+    "description": "Test switch() conditional helper",
+    "steps": [
+      "Step 1: Create switch([(cond1, val1), (cond2, val2)])",
+      "Step 2: Verify nested ternary generated"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "aggregation-helpers",
+    "spec": "P3-09-Aggregation.md",
+    "category": "functional",
+    "description": "Test all_() and any_() aggregation helpers",
+    "steps": [
+      "Step 1: Create all_(sig1, sig2, sig3)",
+      "Step 2: Verify && chain generated",
+      "Step 3: Create any_(sig1, sig2, sig3)",
+      "Step 4: Verify || chain generated"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "class-helpers",
+    "spec": "P3-10-ClassHelpers.md",
+    "category": "functional",
+    "description": "Test collect() for CSS class joining",
+    "steps": [
+      "Step 1: Create collect([(cond1, 'class1'), (cond2, 'class2')])",
+      "Step 2: Verify filter/join pattern generated"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "class-helpers",
+    "spec": "P3-10-ClassHelpers.md",
+    "category": "functional",
+    "description": "Test classes() for data-class object literal",
+    "steps": [
+      "Step 1: Create classes(active=sig1, hidden=sig2)",
+      "Step 2: Verify object literal {active: $sig1, hidden: $sig2}"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "http-action-helpers",
+    "spec": "P3-11-HttpActions.md",
+    "category": "functional",
+    "description": "Test post(), get(), put(), patch(), delete() helpers",
+    "steps": [
+      "Step 1: Create post('/api/data', name='$name')",
+      "Step 2: Verify @post() expression generated",
+      "Step 3: Test get(), put(), patch(), delete()",
+      "Step 4: Verify all HTTP verbs work"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "template-helpers",
+    "spec": "P3-12-TemplateHelpers.md",
+    "category": "functional",
+    "description": "Test f() template literal helper",
+    "steps": [
+      "Step 1: Create f('Hello {name}!', name=signal)",
+      "Step 2: Verify template literal format `Hello ${$name}!`"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "template-helpers",
+    "spec": "P3-12-TemplateHelpers.md",
+    "category": "functional",
+    "description": "Test js() raw JavaScript helper",
+    "steps": [
+      "Step 1: Create js('console.log()')",
+      "Step 2: Verify raw JS passed through"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "property-access",
+    "spec": "P3-13-PropertyAccess.md",
+    "category": "functional",
+    "description": "Test nested property access on Signal",
+    "steps": [
+      "Step 1: Create signal.user.name",
+      "Step 2: Verify to_js() returns '$signal.user.name'"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "property-access",
+    "spec": "P3-13-PropertyAccess.md",
+    "category": "functional",
+    "description": "Test index access on Signal",
+    "steps": [
+      "Step 1: Create signal[0]",
+      "Step 2: Verify to_js() returns '$signal[0]'"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "ds-class",
+    "spec": "P3-14-DSClass.md",
+    "category": "functional",
+    "description": "Test DS.get() action generator",
+    "steps": [
+      "Step 1: Call DS.get('/api/data')",
+      "Step 2: Verify returns @get('/api/data')",
+      "Step 3: Test with query params"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "ds-class",
+    "spec": "P3-14-DSClass.md",
+    "category": "functional",
+    "description": "Test DS.post() with data",
+    "steps": [
+      "Step 1: Call DS.post('/api/users', data={'name': 'test'})",
+      "Step 2: Verify action with data expression"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P3",
+    "feature": "ds-class",
+    "spec": "P3-14-DSClass.md",
+    "category": "functional",
+    "description": "Test DS.set(), toggle(), increment(), decrement()",
+    "steps": [
+      "Step 1: Call DS.set('count', 10)",
+      "Step 2: Verify '$count = 10'",
+      "Step 3: Test toggle(), increment(), decrement()"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "page-function",
+    "spec": "P4-01-PageFunction.md",
+    "category": "functional",
+    "description": "Test Page() creates complete HTML document",
+    "steps": [
+      "Step 1: Create Page(Div('content'), title='Test')",
+      "Step 2: Verify DOCTYPE present",
+      "Step 3: Verify html, head, body structure",
+      "Step 4: Verify title set correctly"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "page-function",
+    "spec": "P4-01-PageFunction.md",
+    "category": "functional",
+    "description": "Test Page() with datastar=True includes CDN script",
+    "steps": [
+      "Step 1: Create Page(content, datastar=True)",
+      "Step 2: Verify datastar script tag present",
+      "Step 3: Verify correct CDN URL"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "page-function",
+    "spec": "P4-01-PageFunction.md",
+    "category": "functional",
+    "description": "Test Page() with hdrs and ftrs",
+    "steps": [
+      "Step 1: Create Page with hdrs=(Meta(...), Link(...))",
+      "Step 2: Create Page with ftrs=(Script(...),)",
+      "Step 3: Verify hdrs in head, ftrs in body"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "page-template",
+    "spec": "P4-02-PageTemplate.md",
+    "category": "functional",
+    "description": "Test page_template() creates decorator",
+    "steps": [
+      "Step 1: Create template = page_template('MyApp')",
+      "Step 2: Decorate function with @template",
+      "Step 3: Verify function output wrapped in Page"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "page-template",
+    "spec": "P4-02-PageTemplate.md",
+    "category": "functional",
+    "description": "Test create_template backwards compatibility",
+    "steps": [
+      "Step 1: Call create_template() (alias for page_template)",
+      "Step 2: Verify works same as page_template"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "utility-functions",
+    "spec": "P4-03-UtilityFunctions.md",
+    "category": "functional",
+    "description": "Test AttrDict attribute access",
+    "steps": [
+      "Step 1: Create AttrDict(a=1, b=2)",
+      "Step 2: Access via d.a and d['a']",
+      "Step 3: Verify both return same value"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "utility-functions",
+    "spec": "P4-03-UtilityFunctions.md",
+    "category": "functional",
+    "description": "Test when() conditional rendering",
+    "steps": [
+      "Step 1: Create when(True, Div('shown'))",
+      "Step 2: Verify Div returned",
+      "Step 3: Create when(False, Div('hidden'))",
+      "Step 4: Verify Fragment returned"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "utility-functions",
+    "spec": "P4-03-UtilityFunctions.md",
+    "category": "functional",
+    "description": "Test unless() inverse conditional rendering",
+    "steps": [
+      "Step 1: Create unless(False, Div('shown'))",
+      "Step 2: Verify Div returned",
+      "Step 3: Create unless(True, Div('hidden'))",
+      "Step 4: Verify Fragment returned"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "html-string",
+    "spec": "P4-04-HtmlString.md",
+    "category": "functional",
+    "description": "Test HtmlString render() and __str__()",
+    "steps": [
+      "Step 1: Create Div('content')",
+      "Step 2: Call render()",
+      "Step 3: Call str()",
+      "Step 4: Verify both return same HTML"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "html-string",
+    "spec": "P4-04-HtmlString.md",
+    "category": "functional",
+    "description": "Test HtmlString encode() for bytes output",
+    "steps": [
+      "Step 1: Create html = Div('content')",
+      "Step 2: Call html.encode('utf-8')",
+      "Step 3: Verify bytes returned"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P4",
+    "feature": "html-string",
+    "spec": "P4-04-HtmlString.md",
+    "category": "functional",
+    "description": "Test HtmlString __html__() protocol",
+    "steps": [
+      "Step 1: Create html = Div('content')",
+      "Step 2: Call html.__html__()",
+      "Step 3: Verify HTML string returned"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P5",
+    "feature": "html-parsing",
+    "spec": "P5-01-HtmlParsing.md",
+    "category": "functional",
+    "description": "Test parse() on simple element",
+    "steps": [
+      "Step 1: Create Div('content', id='test').parse()",
+      "Step 2: Verify HtmlElement returned",
+      "Step 3: Verify tag == 'div'",
+      "Step 4: Verify attributes['id'] == 'test'",
+      "Step 5: Verify children contains 'content'"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P5",
+    "feature": "html-parsing",
+    "spec": "P5-01-HtmlParsing.md",
+    "category": "functional",
+    "description": "Test parse() on nested structure",
+    "steps": [
+      "Step 1: Create Div(Div('inner')).parse()",
+      "Step 2: Verify outer element has child",
+      "Step 3: Verify child is HtmlElement",
+      "Step 4: Verify child.tag == 'div'"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P5",
+    "feature": "html-parsing",
+    "spec": "P5-01-HtmlParsing.md",
+    "category": "functional",
+    "description": "Test parse() with mixed content",
+    "steps": [
+      "Step 1: Create Div('text', Span('span'), 'more').parse()",
+      "Step 2: Verify 3 children",
+      "Step 3: Verify text nodes as strings",
+      "Step 4: Verify element nodes as HtmlElement"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P5",
+    "feature": "html-element-modification",
+    "spec": "P5-02-HtmlElement.md",
+    "category": "functional",
+    "description": "Test modifying HtmlElement attributes",
+    "steps": [
+      "Step 1: Parse element",
+      "Step 2: Modify attributes dict",
+      "Step 3: Add new attribute",
+      "Step 4: Call to_html()",
+      "Step 5: Verify modifications in output"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P5",
+    "feature": "html-element-modification",
+    "spec": "P5-02-HtmlElement.md",
+    "category": "functional",
+    "description": "Test HtmlElement attribute access via dot notation",
+    "steps": [
+      "Step 1: Parse element with data-test attribute",
+      "Step 2: Access via element.data_test",
+      "Step 3: Set via element.new_attr = 'value'",
+      "Step 4: Verify roundtrip"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P5",
+    "feature": "html-element-modification",
+    "spec": "P5-02-HtmlElement.md",
+    "category": "functional",
+    "description": "Test traversing HtmlElement children",
+    "steps": [
+      "Step 1: Parse complex nested structure",
+      "Step 2: Iterate through children",
+      "Step 3: Check tag names",
+      "Step 4: Check attribute values",
+      "Step 5: Modify specific child",
+      "Step 6: Serialize and verify"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P5",
+    "feature": "html-roundtrip",
+    "spec": "P5-03-Roundtrip.md",
+    "category": "functional",
+    "description": "Test parse/modify/serialize roundtrip preserves structure",
+    "steps": [
+      "Step 1: Create complex HTML with attributes",
+      "Step 2: Parse to HtmlElement",
+      "Step 3: Modify some attributes",
+      "Step 4: Serialize with to_html()",
+      "Step 5: Verify structure preserved",
+      "Step 6: Verify modifications applied",
+      "Step 7: Verify unmodified parts unchanged"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P5",
+    "feature": "html-roundtrip",
+    "spec": "P5-03-Roundtrip.md",
+    "category": "functional",
+    "description": "Test form validation use case (add required to inputs)",
+    "steps": [
+      "Step 1: Create Form with multiple Input children",
+      "Step 2: Parse form",
+      "Step 3: Iterate children, find inputs",
+      "Step 4: Add required attribute to each input",
+      "Step 5: Serialize",
+      "Step 6: Verify all inputs have required",
+      "Step 7: Verify other elements unchanged"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P5",
+    "feature": "html-element-protocol",
+    "spec": "P5-04-ElementProtocol.md",
+    "category": "functional",
+    "description": "Test HtmlElement __html__ protocol works as child",
+    "steps": [
+      "Step 1: Parse element to HtmlElement",
+      "Step 2: Use HtmlElement as child in new Div",
+      "Step 3: Verify serialization works",
+      "Step 4: Verify nested content preserved"
+    ],
+    "passes": true
+  },
+  {
+    "phase": "P5",
+    "feature": "html-element-repr",
+    "spec": "P5-05-ElementRepr.md",
+    "category": "functional",
+    "description": "Test HtmlElement __repr__ for debugging",
+    "steps": [
+      "Step 1: Parse element",
+      "Step 2: Call repr()",
+      "Step 3: Verify informative representation",
+      "Step 4: Verify tag, attributes, children count shown"
+    ],
+    "passes": true
+  }
+]
