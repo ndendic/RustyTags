@@ -260,19 +260,21 @@ class TestDatastarExpressionDetection:
         # Verify the value is preserved without modification
 
     def test_action_reference_detection(self):
-        """Test that @ action references are preserved as expressions."""
+        """Test that @ action references are HTML-escaped in attributes."""
         result = str(Button("Load", on_click="@get('/api/data')"))
-        assert "@get('/api/data')" in result
+        # Single quotes are escaped to &#x27; to prevent breaking HTML attributes
+        assert "@get(&#x27;/api/data&#x27;)" in result
 
     def test_javascript_equality_operator(self):
-        """Test that === operator is preserved."""
+        """Test that === operator is preserved (= is not escaped)."""
         result = str(Div(show="$status === 'active'"))
         assert "===" in result
 
     def test_javascript_logical_and_operator(self):
-        """Test that && operator is preserved."""
+        """Test that && operator is HTML-escaped in attributes."""
         result = str(Div(show="$isActive && $isVisible"))
-        assert "&&" in result
+        # & is escaped to &amp; to produce valid HTML
+        assert "&amp;&amp;" in result
 
     def test_javascript_logical_or_operator(self):
         """Test that || operator is preserved."""
@@ -280,11 +282,12 @@ class TestDatastarExpressionDetection:
         assert "||" in result
 
     def test_complex_expression(self):
-        """Test complex expression with multiple operators."""
+        """Test complex expression with multiple operators is HTML-escaped."""
         result = str(Div(show="($count > 0) && ($status === 'ready')"))
-        assert ">=" not in result or ">" in result
+        # & is escaped to &amp;, > is escaped to &gt;, ' is escaped to &#x27;
+        assert "&amp;&amp;" in result
         assert "===" in result
-        assert "&&" in result
+        assert "&gt;" in result
 
 
 if __name__ == "__main__":

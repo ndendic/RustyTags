@@ -150,11 +150,8 @@ impl DatastarValue {
     #[inline]
     pub fn to_html_attr(&self) -> String {
         match self {
-            DatastarValue::Expression(expr) => expr.clone(),
-            DatastarValue::String(s) => {
-                // Return string as-is, no escaping needed since HTML attributes use double quotes
-                s.clone()
-            },
+            DatastarValue::Expression(expr) => html_escape(expr),
+            DatastarValue::String(s) => html_escape(s),
             DatastarValue::Boolean(b) => b.to_string(),
             DatastarValue::Number(n) => {
                 // Use optimized number formatting
@@ -170,7 +167,7 @@ impl DatastarValue {
             },
             DatastarValue::Json(json) => json.clone(),
             DatastarValue::Null => "null".to_string(),
-            DatastarValue::Raw(raw) => raw.clone(),
+            DatastarValue::Raw(raw) => html_escape(raw),
         }
     }
     
