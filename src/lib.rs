@@ -549,7 +549,15 @@ fn map_shorthand_attribute(key: &str) -> Option<String> {
         key if key.starts_with("data_signals_") => {
             Some(format!("ds_signals_{}", &key[13..]))  // Strip "data_signals_" prefix
         },
-        
+        // data_on_* -> ds_on_* (e.g., data_on_click -> ds_on_click -> data-on:click)
+        key if key.starts_with("data_on_") => {
+            Some(format!("ds_on_{}", &key[8..]))  // Strip "data_on_" prefix
+        },
+        // data_bind_* -> ds_bind_* (e.g., data_bind_title -> ds_bind_title -> data-bind:title)
+        key if key.starts_with("data_bind_") => {
+            Some(format!("ds_bind_{}", &key[10..]))  // Strip "data_bind_" prefix
+        },
+
         // Pro/Advanced attributes (lower priority but included for completeness)
         "persist" => Some("ds_persist".to_string()),
         "query_string" => Some("ds_query_string".to_string()),
